@@ -1,0 +1,306 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>表→markdown-竖杠</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+            min-height: 100vh;
+            background-color: #f4f5f7;
+        }
+        .markdown-converter {
+            background: white;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+            width: 800px; 
+            max-width: 95%;
+        }
+        .markdown-converter textarea {
+            width: calc(100% - 24px);
+            height: 200px;
+            margin: 15px 0;
+            padding: 12px;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            resize: vertical;
+            font-size: 14px;
+            font-family: Consolas, 'Courier New', monospace; /* 使用等宽字体，方便查看对齐 */
+            line-height: 1.5;
+        }
+        .markdown-converter button {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 12px 20px;
+            border-radius: 6px;
+            cursor: pointer;
+            width: 100%;
+            margin-top: 5px;
+            margin-bottom: 10px;
+            transition: background-color 0.3s, opacity 0.3s;
+            font-size: 16px;
+            font-weight: 500;
+        }
+        .markdown-converter button:hover:not(:disabled) {
+            background: #0056b3;
+        }
+        .markdown-converter button:disabled {
+            background: #cccccc;
+            cursor: not-allowed;
+            opacity: 0.7;
+        }
+        .markdown-converter h3 {
+            margin: 20px 0 10px 0;
+            font-size: 22px;
+            border-bottom: 1px solid #eee;
+            padding-bottom: 10px;
+        }
+        .button-group {
+            display: flex;
+            gap: 10px;
+        }
+        .button-group button {
+            flex: 1;
+            margin-top:0;
+        }
+        #clearBtn {
+            background-color: #dc3545;
+        }
+        #clearBtn:hover:not(:disabled) {
+            background-color: #c82333;
+        }
+        .toast {
+            position: fixed;
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0, 0, 0, 0.75);
+            color: white;
+            padding: 12px 24px;
+            border-radius: 6px;
+            z-index: 10001;
+            animation: fadeInOut 3s ease-in-out;
+            font-size: 16px;
+            pointer-events: none;
+        }
+        @keyframes fadeInOut {
+            0%, 100% { opacity: 0; transform: translate(-50%, 20px); }
+            10%, 90% { opacity: 1; transform: translate(-50%, 0); }
+        }
+    </style>
+</head>
+<body>
+    <div class="markdown-converter">
+        <h3>表格转 Markdown 转换器</h3>
+        <div class="button-group">
+            <button id="pasteBtn">从剪贴板粘贴</button>
+            <button id="clearBtn">清空内容</button>
+        </div>
+        <textarea id="tableInput" placeholder="在此处粘贴从Excel、WPS或网页复制的表格内容..."></textarea>
+        <button id="convertBtn">转换为Markdown</button>
+        <h3>转换结果:</h3>
+        <textarea id="markdownOutput" readonly placeholder="转换后的Markdown内容会显示在这里"></textarea>
+        <button id="copyBtn">复制到剪贴板</button>
+    </div>
+
+    <script>
+        function showToast(message) {
+            // 移除现有的toast，防止重叠
+            const existingToast = document.querySelector('.toast');
+            if (existingToast) {
+                existingToast.remove();
+            }
+
+            const toast = document.createElement('div');
+            toast.className = 'toast';
+            toast.textContent = message;
+            document.body.appendChild(toast);
+
+            setTimeout(() => {
+                if (toast.parentElement) {
+                    toast.parentElement.removeChild(toast);
+                }
+            }, 3000);
+        }
+
+        /**
+         * @param {string} text - The raw text copied from a spreadsheet.
+         * @returns {string[][]} - A 2D array of cells.
+         */
+        function parseTableText(text) {
+            if (!text || !text.trim()) return [];
+            
+            // 规范化换行符，并移除末尾可能多余的换行
+            const normalizedText = text.replace(/\r\n/g, '\n').trim();
+            const separator = normalizedText.includes('\t') ? '\t' : ',';
+            
+            const rows = [];
+            let currentRow = [];
+            let currentCell = '';
+            let inQuotes = false;
+
+            for (let i = 0; i < normalizedText.length; i++) {
+                const char = normalizedText[i];
+
+                if (inQuotes) {
+                    if (char === '"') {
+                        // 处理连续两个双引号 "" 的情况，它代表一个真正的引号
+                        if (i + 1 < normalizedText.length && normalizedText[i + 1] === '"') {
+                            currentCell += '"';
+                            i++; // 跳过下一个引号
+                        } else {
+                            inQuotes = false;
+                        }
+                    } else {
+                        currentCell += char;
+                    }
+                } else {
+                    if (char === '"') {
+                        inQuotes = true;
+                    } else if (char === separator) {
+                        currentRow.push(currentCell);
+                        currentCell = '';
+                    } else if (char === '\n') {
+                        currentRow.push(currentCell);
+                        rows.push(currentRow);
+                        currentRow = [];
+                        currentCell = '';
+                    } else {
+                        currentCell += char;
+                    }
+                }
+            }
+            
+            // 添加最后一个单元格和最后一行
+            currentRow.push(currentCell);
+            rows.push(currentRow);
+
+            return rows;
+        }
+
+        /**
+         * @param {string} tableText - The raw text from the input textarea.
+         * @returns {string} - The formatted Markdown table.
+         */
+        function convertToMarkdown(tableText) {
+            const parsedRows = parseTableText(tableText);
+            
+            if (parsedRows.length === 0) return '';
+            
+            // 清理每个单元格并替换内部换行符
+            const cleanedRows = parsedRows.map(row => 
+                row.map(cell => {
+                    // 核心处理逻辑：
+                    // 1. 替换内部换行符为 <br>
+                    // 2. Trim 首尾空格
+                    return cell.replace(/\n/g, '<br>').trim();
+                })
+            );
+
+            const maxCols = Math.max(...cleanedRows.map(row => row.length));
+
+            // 确保所有行都有相同数量的列
+            cleanedRows.forEach(row => {
+                while (row.length < maxCols) {
+                    row.push('');
+                }
+            });
+            
+            // 过滤掉完全是空的行
+            const finalRows = cleanedRows.filter(row => row.join('').trim() !== '');
+            if (finalRows.length === 0) return '';
+
+            // 构建 Markdown 字符串
+            let markdown = '';
+            // 表头
+            markdown += '| ' + finalRows[0].join(' | ') + ' |\n';
+            // 分隔线
+            markdown += '|' + Array(maxCols).fill(' --- ').join('|') + '|\n';
+            // 表格内容
+            for (let i = 1; i < finalRows.length; i++) {
+                markdown += '| ' + finalRows[i].join(' | ') + ' |\n';
+            }
+
+            return markdown;
+        }
+
+        // --- DOM元素和事件监听 ---
+        const pasteBtn = document.getElementById('pasteBtn');
+        const clearBtn = document.getElementById('clearBtn');
+        const convertBtn = document.getElementById('convertBtn');
+        const copyBtn = document.getElementById('copyBtn');
+        const tableInput = document.getElementById('tableInput');
+        const markdownOutput = document.getElementById('markdownOutput');
+
+        pasteBtn.addEventListener('click', async () => {
+            try {
+                if (!navigator.clipboard || !navigator.clipboard.readText) {
+                    throw new Error('浏览器不支持 Clipboard API');
+                }
+                const text = await navigator.clipboard.readText();
+                tableInput.value = text;
+                updateButtonStates();
+                showToast('已从剪贴板粘贴');
+            } catch (err) {
+                console.error('粘贴失败: ', err);
+                showToast('粘贴失败，请使用 Ctrl+V');
+            }
+        });
+
+        clearBtn.addEventListener('click', () => {
+            tableInput.value = '';
+            markdownOutput.value = '';
+            updateButtonStates();
+            showToast('已清空所有内容');
+        });
+
+        convertBtn.addEventListener('click', () => {
+            const markdown = convertToMarkdown(tableInput.value);
+            markdownOutput.value = markdown;
+            updateButtonStates();
+            if (markdown) {
+                showToast('转换成功！');
+            } else if (tableInput.value.trim()) {
+                showToast('转换失败，请检查输入格式');
+            }
+        });
+
+        copyBtn.addEventListener('click', async () => {
+            if (!markdownOutput.value) return;
+            try {
+                if (!navigator.clipboard || !navigator.clipboard.writeText) {
+                    throw new Error('浏览器不支持 Clipboard API');
+                }
+                await navigator.clipboard.writeText(markdownOutput.value);
+                showToast('已复制到剪贴板');
+            } catch (err) {
+                console.error('复制失败: ', err);
+                showToast('复制失败！');
+            }
+        });
+        
+        // 更新所有按钮的禁用状态
+        function updateButtonStates() {
+            const hasInput = tableInput.value.trim().length > 0;
+            const hasOutput = markdownOutput.value.trim().length > 0;
+            
+            convertBtn.disabled = !hasInput;
+            clearBtn.disabled = !hasInput && !hasOutput;
+            copyBtn.disabled = !hasOutput;
+        }
+
+        tableInput.addEventListener('input', updateButtonStates);
+
+        // 页面加载时初始化按钮状态
+        window.addEventListener('load', updateButtonStates);
+    </script>
+</body>
+</html>
