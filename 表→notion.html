@@ -1,0 +1,641 @@
+﻿<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="robots" content="noindex, nofollow">
+    <title>表转notion</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500;700;800&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            color-scheme: light;
+            --bg: linear-gradient(180deg, #f5f5f7 0%, #ececf1 100%);
+            --panel: linear-gradient(180deg, rgba(255,255,255,.94), rgba(248,248,251,.98));
+            --panel-soft: linear-gradient(180deg, rgba(255,255,255,.80), rgba(245,246,249,.94));
+            --editor: linear-gradient(180deg, #fcfcfe 0%, #f5f6f9 100%);
+            --line: rgba(17, 17, 17, 0.08);
+            --text: #1d1d1f;
+            --text-strong: #101114;
+            --muted: #6e6e73;
+            --placeholder: #9a9aa1;
+            --button: rgba(255,255,255,.88);
+            --button-hover: rgba(255,255,255,.98);
+            --button-text: #1d1d1f;
+            --accent: #0071e3;
+            --accent-hover: #0077ed;
+            --accent-text: #ffffff;
+            --focus: rgba(0,113,227,.26);
+            --shadow: 0 24px 64px rgba(0, 0, 0, 0.08);
+            --radius-xl: 32px;
+            --radius-lg: 24px;
+        }
+
+        * { box-sizing: border-box; }
+        html, body { margin: 0; min-height: 100%; }
+
+        body {
+            font-family: "Noto Sans SC", -apple-system, BlinkMacSystemFont, "PingFang SC", "Microsoft YaHei", sans-serif;
+            color: var(--text);
+            background: var(--bg);
+            letter-spacing: -0.01em;
+        }
+
+        button, textarea { font: inherit; }
+
+        .page {
+            max-width: 1560px;
+            margin: 0 auto;
+            padding: 22px;
+        }
+
+        .app {
+            min-height: calc(100vh - 44px);
+            display: grid;
+            grid-template-rows: auto auto 1fr;
+            gap: 18px;
+        }
+
+        .hero,
+        .toolbar,
+        .panel {
+            position: relative;
+            background: var(--panel);
+            border: 1px solid var(--line);
+            box-shadow: var(--shadow);
+            backdrop-filter: blur(24px);
+        }
+
+        .hero {
+            border-radius: var(--radius-xl);
+            padding: 28px 30px;
+            overflow: hidden;
+        }
+
+        .hero::before {
+            content: "";
+            position: absolute;
+            inset: 0;
+            background:
+                radial-gradient(circle at 84% 18%, rgba(0,113,227,.10), transparent 18%),
+                radial-gradient(circle at 76% 78%, rgba(255,255,255,.72), transparent 24%),
+                linear-gradient(135deg, rgba(255,255,255,.18), transparent 35%);
+            pointer-events: none;
+        }
+
+        .hero-inner {
+            position: relative;
+            z-index: 1;
+            display: grid;
+            gap: 14px;
+        }
+
+        .kicker {
+            width: fit-content;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 12px;
+            border-radius: 999px;
+            background: rgba(255,255,255,.66);
+            border: 1px solid rgba(17,17,17,.08);
+            color: var(--muted);
+            font-size: 12px;
+            letter-spacing: .08em;
+            text-transform: uppercase;
+        }
+
+        .kicker::before {
+            content: "";
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: var(--accent);
+        }
+
+        .hero h1 {
+            margin: 0;
+            font-size: clamp(2.3rem, 1.9rem + 1.3vw, 3.4rem);
+            line-height: 1.08;
+            letter-spacing: -0.05em;
+            color: var(--text-strong);
+        }
+
+        .hero p {
+            margin: 0;
+            max-width: 70ch;
+            color: var(--muted);
+            line-height: 1.9;
+            font-size: 1rem;
+        }
+
+        .toolbar {
+            border-radius: var(--radius-xl);
+            padding: 14px;
+            display: flex;
+            justify-content: space-between;
+            gap: 14px;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+
+        .toolbar-group {
+            display: flex;
+            gap: 12px;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+
+        .btn {
+            min-width: 148px;
+            min-height: 48px;
+            padding: 0 20px;
+            border-radius: 999px;
+            border: 1px solid var(--line);
+            background: var(--button);
+            color: var(--button-text);
+            cursor: pointer;
+            transition: transform 180ms ease, box-shadow 180ms ease, background-color 180ms ease, border-color 180ms ease;
+        }
+
+        .btn:hover:not(:disabled) {
+            transform: translateY(-1px);
+            background: var(--button-hover);
+            box-shadow: 0 10px 24px rgba(0,0,0,.06);
+        }
+
+        .btn:disabled {
+            opacity: .42;
+            cursor: not-allowed;
+        }
+
+        .btn-primary {
+            background: var(--accent);
+            border-color: var(--accent);
+            color: var(--accent-text);
+        }
+
+        .btn-primary:hover:not(:disabled) {
+            background: var(--accent-hover);
+        }
+
+        .btn-large {
+            min-width: 188px;
+            min-height: 58px;
+            padding: 0 30px;
+            font-size: 1.08rem;
+            font-weight: 700;
+        }
+
+        .toolbar-note {
+            color: var(--muted);
+            font-size: .95rem;
+            line-height: 1.7;
+        }
+
+        .workspace {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 18px;
+            min-height: 0;
+        }
+
+        .panel {
+            border-radius: var(--radius-xl);
+            padding: 16px;
+            display: grid;
+            grid-template-rows: auto auto 1fr;
+            gap: 14px;
+            min-height: 580px;
+        }
+
+        .panel-head {
+            display: flex;
+            justify-content: space-between;
+            gap: 14px;
+            align-items: start;
+        }
+
+        .panel-title h2 {
+            margin: 0;
+            font-size: 1.28rem;
+            letter-spacing: -0.03em;
+        }
+
+        .panel-title p,
+        .panel-meta {
+            margin: 6px 0 0;
+            color: var(--muted);
+            font-size: .94rem;
+            line-height: 1.6;
+        }
+
+        .panel-strip {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        .pill {
+            display: inline-flex;
+            align-items: center;
+            min-height: 38px;
+            padding: 0 14px;
+            border-radius: 999px;
+            background: rgba(255,255,255,.62);
+            border: 1px solid var(--line);
+            color: var(--muted);
+        }
+
+        .editor {
+            width: 100%;
+            min-height: 100%;
+            resize: none;
+            border: 1px solid var(--line);
+            border-radius: calc(var(--radius-lg) - 4px);
+            background: var(--editor);
+            color: var(--text);
+            padding: 20px 22px;
+            line-height: 1.85;
+            box-shadow: inset 0 1px 0 rgba(255,255,255,.7);
+        }
+
+        .editor::placeholder {
+            color: var(--placeholder);
+        }
+
+        .editor:focus,
+        .btn:focus-visible {
+            outline: none;
+            box-shadow: 0 0 0 4px var(--focus);
+        }
+
+        .toast-stack {
+            position: fixed;
+            right: 22px;
+            bottom: 22px;
+            display: grid;
+            gap: 10px;
+            z-index: 1000;
+        }
+
+        .toast {
+            min-width: 220px;
+            padding: 14px 16px;
+            border-radius: 18px;
+            background: rgba(20, 21, 25, 0.88);
+            color: #fff;
+            box-shadow: 0 20px 36px rgba(0,0,0,.18);
+            animation: toastIn 220ms ease-out;
+        }
+
+        .toast.is-leaving {
+            animation: toastOut 220ms ease-in forwards;
+        }
+
+        @keyframes toastIn {
+            from { opacity: 0; transform: translateY(12px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        @keyframes toastOut {
+            from { opacity: 1; transform: translateY(0); }
+            to { opacity: 0; transform: translateY(12px); }
+        }
+
+        @media (max-width: 1100px) {
+            .workspace {
+                grid-template-columns: 1fr;
+            }
+
+            .panel {
+                min-height: 420px;
+            }
+        }
+
+        @media (max-width: 720px) {
+            .page {
+                padding: 14px;
+            }
+
+            .hero,
+            .toolbar,
+            .panel {
+                border-radius: 24px;
+            }
+
+            .hero,
+            .panel {
+                padding: 18px;
+            }
+
+            .toolbar {
+                padding: 12px;
+            }
+
+            .btn-large {
+                width: 100%;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="page">
+        <main class="app">
+            <section class="hero">
+                <div class="hero-inner">
+                    <div class="kicker">Table → Notion</div>
+                    <h1>表格转Notion</h1>
+                    <p>把表格内容粘贴到左侧输入框，页面会自动按列生成多级编号文本。支持单元格内换行内容，不需要手动点转换。整理好后，直接复制右侧结果再粘贴到 Notion 就可以。</p>
+                </div>
+            </section>
+
+            <section class="toolbar">
+                <div class="toolbar-group">
+                    <button class="btn" id="sampleBtn" type="button">填入示例</button>
+                    <button class="btn btn-large" id="clearBtn" type="button" disabled>清空内容</button>
+                </div>
+                <div class="toolbar-group">
+                    <div class="toolbar-note">输入时自动转换，不需要再手动点击。</div>
+                    <button class="btn btn-primary btn-large" id="copyBtn" type="button" disabled>复制结果</button>
+                </div>
+            </section>
+
+            <section class="workspace">
+                <section class="panel">
+                    <div class="panel-head">
+                        <div class="panel-title">
+                            <h2>原始表格内容</h2>
+                            <p>直接粘贴表格内容即可，支持多列和单元格内换行。</p>
+                        </div>
+                        <div class="panel-meta" id="inputMeta">0 行 · 0 字</div>
+                    </div>
+                    <div class="panel-strip">
+                        <div class="pill" id="statRows">表格 0 行</div>
+                        <div class="pill">支持 Excel / WPS / 飞书</div>
+                        <div class="pill">输入即自动转换</div>
+                    </div>
+                    <textarea class="editor" id="input" spellcheck="false" placeholder="把表格内容粘贴到这里"></textarea>
+                </section>
+
+                <section class="panel">
+                    <div class="panel-head">
+                        <div class="panel-title">
+                            <h2>Notion 编号结果</h2>
+                            <p>右侧结果可以直接复制后粘贴到 Notion。</p>
+                        </div>
+                        <div class="panel-meta" id="outputMeta">0 行输出</div>
+                    </div>
+                    <div class="panel-strip">
+                        <div class="pill" id="statLevels">层级 0 级</div>
+                        <div class="pill" id="statOutput">输出 0 行</div>
+                        <div class="pill">支持保留后面列内容</div>
+                    </div>
+                    <textarea class="editor" id="output" spellcheck="false" readonly placeholder="转换结果会显示在这里"></textarea>
+                </section>
+            </section>
+        </main>
+    </div>
+
+    <div class="toast-stack" id="toastStack" aria-live="polite"></div>
+
+    <script>
+        const input = document.getElementById('input');
+        const output = document.getElementById('output');
+        const sampleBtn = document.getElementById('sampleBtn');
+        const clearBtn = document.getElementById('clearBtn');
+        const copyBtn = document.getElementById('copyBtn');
+        const inputMeta = document.getElementById('inputMeta');
+        const outputMeta = document.getElementById('outputMeta');
+        const statRows = document.getElementById('statRows');
+        const statLevels = document.getElementById('statLevels');
+        const statOutput = document.getElementById('statOutput');
+        const toastStack = document.getElementById('toastStack');
+
+        const sampleText = [
+            'A1单元格\tB1单元格\tC1单元格\tD1单元格\tE1单元格',
+            'A2单元格\tB2单元格\tC2单元格\tD2单元格内第1行',
+            'D2单元格内换行后第2行',
+            'D2单元格内换行后第3行\tE2单元格',
+            'E2单元格内换行后第2行',
+            'E2单元格内换行第3行'
+        ].join('\r\n');
+
+        function showToast(message) {
+            const toast = document.createElement('div');
+            toast.className = 'toast';
+            toast.textContent = message;
+            toastStack.appendChild(toast);
+
+            window.setTimeout(() => {
+                toast.classList.add('is-leaving');
+                window.setTimeout(() => toast.remove(), 220);
+            }, 1800);
+        }
+
+        function parseQuotedTSV(text) {
+            const normalized = text.replace(/\r\n/g, '\n').replace(/\r/g, '\n').trim();
+            if (!normalized) return [];
+
+            const rows = [];
+            let row = [];
+            let cell = '';
+            let inQuotes = false;
+
+            for (let index = 0; index < normalized.length; index += 1) {
+                const char = normalized[index];
+                const nextChar = normalized[index + 1];
+
+                if (char === '"') {
+                    if (inQuotes && nextChar === '"') {
+                        cell += '"';
+                        index += 1;
+                    } else {
+                        inQuotes = !inQuotes;
+                    }
+                    continue;
+                }
+
+                if (char === '\t' && !inQuotes) {
+                    row.push(cell);
+                    cell = '';
+                    continue;
+                }
+
+                if (char === '\n' && !inQuotes) {
+                    row.push(cell);
+                    rows.push(row);
+                    row = [];
+                    cell = '';
+                    continue;
+                }
+
+                cell += char;
+            }
+
+            row.push(cell);
+            rows.push(row);
+            return rows.filter((currentRow) => currentRow.some((currentCell) => currentCell.trim() !== ''));
+        }
+
+        function parseLooseTable(text) {
+            const normalized = text.replace(/\r\n/g, '\n').replace(/\r/g, '\n').trim();
+            if (!normalized) return [];
+
+            const lines = normalized.split('\n');
+            const expectedColumns = Math.max(...lines.map((line) => line.split('\t').length));
+            const rows = [];
+            let currentRow = null;
+
+            lines.forEach((line) => {
+                const parts = line.split('\t');
+
+                if (!currentRow) {
+                    currentRow = [...parts];
+                    return;
+                }
+
+                if (currentRow.length < expectedColumns) {
+                    currentRow[currentRow.length - 1] += `\n${parts[0]}`;
+                    for (let index = 1; index < parts.length; index += 1) {
+                        currentRow.push(parts[index]);
+                    }
+                    return;
+                }
+
+                if (parts.length === 1) {
+                    currentRow[currentRow.length - 1] += `\n${parts[0]}`;
+                    return;
+                }
+
+                rows.push(currentRow);
+                currentRow = [...parts];
+            });
+
+            if (currentRow && currentRow.some((cell) => (cell || '').trim() !== '')) {
+                rows.push(currentRow);
+            }
+
+            return rows.filter((currentRow) => currentRow.some((currentCell) => currentCell.trim() !== ''));
+        }
+
+        function parseTable(text) {
+            if (!text.trim()) return [];
+            if (text.includes('"')) {
+                return parseQuotedTSV(text);
+            }
+            return parseLooseTable(text);
+        }
+
+        function convertFormat(text) {
+            const rows = parseTable(text);
+            const result = [];
+            const counters = [];
+            let maxDepth = 0;
+
+            rows.forEach((row) => {
+                let lastNonEmptyColumn = -1;
+                for (let index = row.length - 1; index >= 0; index -= 1) {
+                    if ((row[index] || '').trim() !== '') {
+                        lastNonEmptyColumn = index;
+                        break;
+                    }
+                }
+
+                if (lastNonEmptyColumn < 0) return;
+                maxDepth = Math.max(maxDepth, lastNonEmptyColumn + 1);
+
+                for (let index = 0; index <= lastNonEmptyColumn; index += 1) {
+                    const content = (row[index] || '').trim();
+                    if (!content) continue;
+
+                    counters[index] = (counters[index] || 0) + 1;
+                    counters.length = index + 1;
+
+                    const indent = '    '.repeat(index);
+                    const lines = content.split('\n').filter((line) => line.trim() !== '');
+
+                    lines.forEach((line, lineIndex) => {
+                        const currentNumber = lineIndex === 0 ? counters[index] : ++counters[index];
+                        result.push(`${indent}${currentNumber}. ${line.trim()}`);
+                    });
+                }
+            });
+
+            return {
+                text: result.join('\n'),
+                rows: rows.length,
+                levels: maxDepth,
+                outputLines: result.length
+            };
+        }
+
+        function updateStats(result) {
+            const source = input.value.trim();
+            const inputLines = source ? input.value.split(/\r\n|\n|\r/).length : 0;
+
+            inputMeta.textContent = `${inputLines} 行 · ${source.length} 字`;
+            outputMeta.textContent = `${result.outputLines} 行输出`;
+            statRows.textContent = `表格 ${result.rows} 行`;
+            statLevels.textContent = `层级 ${result.levels} 级`;
+            statOutput.textContent = `输出 ${result.outputLines} 行`;
+            clearBtn.disabled = !source;
+            copyBtn.disabled = !result.text;
+        }
+
+        function performConversion(showMessage = false) {
+            const result = convertFormat(input.value);
+            output.value = result.text;
+            updateStats(result);
+
+            if (showMessage) {
+                showToast(result.text ? '已填入示例数据' : '没有可转换的内容');
+            }
+        }
+
+        async function copyText(text) {
+            if (navigator.clipboard && window.isSecureContext) {
+                await navigator.clipboard.writeText(text);
+                return true;
+            }
+
+            output.focus();
+            output.select();
+            return document.execCommand('copy');
+        }
+
+        sampleBtn.addEventListener('click', () => {
+            input.value = sampleText;
+            performConversion(true);
+        });
+
+        clearBtn.addEventListener('click', () => {
+            input.value = '';
+            output.value = '';
+            updateStats({ text: '', rows: 0, levels: 0, outputLines: 0 });
+            showToast('已清空内容');
+        });
+
+        copyBtn.addEventListener('click', async () => {
+            if (!output.value.trim()) {
+                showToast('当前没有可复制的结果');
+                return;
+            }
+
+            try {
+                await copyText(output.value);
+                showToast('已复制到剪贴板');
+            } catch {
+                showToast('复制失败，请手动选择文本后复制');
+            }
+        });
+
+        input.addEventListener('input', () => {
+            performConversion(false);
+        });
+
+        updateStats({ text: '', rows: 0, levels: 0, outputLines: 0 });
+    </script>
+</body>
+</html>
