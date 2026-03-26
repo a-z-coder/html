@@ -1,0 +1,676 @@
+﻿<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="robots" content="noindex, nofollow">
+    <title>英文标点转中文标点</title>
+    <style>
+        :root {
+            color-scheme: light;
+            --bg: linear-gradient(180deg, #f5f5f7 0%, #ececf1 100%);
+            --panel: linear-gradient(180deg, rgba(255,255,255,.94), rgba(248,248,251,.98));
+            --panel-soft: linear-gradient(180deg, rgba(255,255,255,.82), rgba(245,246,249,.94));
+            --editor: linear-gradient(180deg, #fcfcfe 0%, #f5f6f9 100%);
+            --line: rgba(17, 17, 17, 0.08);
+            --text: #1d1d1f;
+            --text-strong: #101114;
+            --muted: #6e6e73;
+            --placeholder: #9a9aa1;
+            --button: rgba(255,255,255,.88);
+            --button-hover: rgba(255,255,255,.98);
+            --button-text: #1d1d1f;
+            --accent: #0071e3;
+            --accent-hover: #0077ed;
+            --accent-text: #ffffff;
+            --focus: rgba(0,113,227,.26);
+            --shadow: 0 24px 64px rgba(0, 0, 0, 0.08);
+            --radius-xl: 32px;
+            --radius-lg: 24px;
+        }
+
+        * { box-sizing: border-box; }
+        html, body { margin: 0; min-height: 100%; }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+            color: var(--text);
+            background: var(--bg);
+            letter-spacing: -0.01em;
+        }
+
+        button, textarea { font: inherit; }
+
+        .page {
+            max-width: 1560px;
+            margin: 0 auto;
+            padding: 22px;
+        }
+
+        .app {
+            min-height: calc(100vh - 44px);
+            display: grid;
+            grid-template-rows: auto auto 1fr;
+            gap: 18px;
+        }
+
+        .hero,
+        .toolbar,
+        .panel {
+            position: relative;
+            background: var(--panel);
+            border: 1px solid var(--line);
+            box-shadow: var(--shadow);
+            backdrop-filter: blur(24px);
+        }
+
+        .hero {
+            border-radius: var(--radius-xl);
+            padding: 28px 30px;
+            overflow: hidden;
+        }
+
+        .hero::before {
+            content: "";
+            position: absolute;
+            inset: 0;
+            background:
+                radial-gradient(circle at 84% 18%, rgba(0,113,227,.10), transparent 18%),
+                radial-gradient(circle at 76% 78%, rgba(255,255,255,.72), transparent 24%),
+                linear-gradient(135deg, rgba(255,255,255,.18), transparent 35%);
+            pointer-events: none;
+        }
+
+        .hero-inner {
+            position: relative;
+            z-index: 1;
+            display: grid;
+            gap: 14px;
+        }
+
+        .kicker {
+            width: fit-content;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 12px;
+            border-radius: 999px;
+            background: rgba(255,255,255,.66);
+            border: 1px solid rgba(17,17,17,.08);
+            color: var(--muted);
+            font-size: 12px;
+            letter-spacing: .08em;
+            text-transform: uppercase;
+        }
+
+        .kicker::before {
+            content: "";
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: var(--accent);
+        }
+
+        .hero h1 {
+            margin: 0;
+            font-size: clamp(2.3rem, 1.9rem + 1.3vw, 3.4rem);
+            line-height: 1.08;
+            letter-spacing: -0.05em;
+            color: var(--text-strong);
+        }
+
+        .hero p {
+            margin: 0;
+            max-width: 64ch;
+            color: var(--muted);
+            line-height: 1.9;
+            font-size: 1rem;
+        }
+
+        .toolbar {
+            border-radius: var(--radius-xl);
+            padding: 14px;
+            display: flex;
+            justify-content: space-between;
+            gap: 14px;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+
+        .toolbar-group {
+            display: flex;
+            gap: 12px;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+
+        .btn {
+            min-width: 136px;
+            min-height: 48px;
+            padding: 0 20px;
+            border-radius: 999px;
+            border: 1px solid var(--line);
+            background: var(--button);
+            color: var(--button-text);
+            cursor: pointer;
+            transition: transform 180ms ease, box-shadow 180ms ease, background-color 180ms ease, border-color 180ms ease;
+        }
+
+        .btn:hover:not(:disabled) {
+            transform: translateY(-1px);
+            background: var(--button-hover);
+            box-shadow: 0 10px 24px rgba(0,0,0,.06);
+        }
+
+        .btn:disabled {
+            opacity: .42;
+            cursor: not-allowed;
+        }
+
+        .btn-primary {
+            background: var(--accent);
+            border-color: var(--accent);
+            color: var(--accent-text);
+        }
+
+        .btn-primary:hover:not(:disabled) {
+            background: var(--accent-hover);
+        }
+
+        .btn-large {
+            min-width: 172px;
+            min-height: 58px;
+            padding: 0 30px;
+            font-size: 1.04rem;
+            font-weight: 700;
+        }
+
+        .toolbar-note {
+            color: var(--muted);
+            font-size: .95rem;
+            line-height: 1.7;
+        }
+
+        .workspace {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 18px;
+            min-height: 0;
+        }
+
+        .panel {
+            border-radius: var(--radius-xl);
+            padding: 16px;
+            display: grid;
+            grid-template-rows: auto auto 1fr;
+            gap: 14px;
+            min-height: 580px;
+        }
+
+        .panel-head {
+            display: flex;
+            justify-content: space-between;
+            gap: 14px;
+            align-items: start;
+        }
+
+        .panel-title h2 {
+            margin: 0;
+            font-size: 1.28rem;
+            letter-spacing: -0.03em;
+        }
+
+        .panel-title p,
+        .panel-meta {
+            margin: 6px 0 0;
+            color: var(--muted);
+            font-size: .94rem;
+            line-height: 1.6;
+        }
+
+        .panel-strip {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        .pill {
+            display: inline-flex;
+            align-items: center;
+            min-height: 38px;
+            padding: 0 14px;
+            border-radius: 999px;
+            background: rgba(255,255,255,.62);
+            border: 1px solid var(--line);
+            color: var(--muted);
+        }
+
+        .editor {
+            width: 100%;
+            min-height: 100%;
+            resize: none;
+            border: 1px solid var(--line);
+            border-radius: calc(var(--radius-lg) - 4px);
+            background: var(--editor);
+            color: var(--text);
+            padding: 20px 22px;
+            line-height: 1.85;
+            box-shadow: inset 0 1px 0 rgba(255,255,255,.7);
+        }
+
+        .editor::placeholder {
+            color: var(--placeholder);
+        }
+
+        .editor:focus,
+        .btn:focus-visible {
+            outline: none;
+            box-shadow: 0 0 0 4px var(--focus);
+        }
+
+        .toast-stack {
+            position: fixed;
+            right: 22px;
+            bottom: 22px;
+            display: grid;
+            gap: 10px;
+            z-index: 1000;
+        }
+
+        .toast {
+            min-width: 220px;
+            padding: 14px 16px;
+            border-radius: 18px;
+            background: rgba(20, 21, 25, 0.88);
+            color: #fff;
+            box-shadow: 0 20px 36px rgba(0,0,0,.18);
+            animation: toastIn 220ms ease-out;
+        }
+
+        .toast.is-leaving {
+            animation: toastOut 220ms ease-in forwards;
+        }
+
+        @keyframes toastIn {
+            from { opacity: 0; transform: translateY(12px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        @keyframes toastOut {
+            from { opacity: 1; transform: translateY(0); }
+            to { opacity: 0; transform: translateY(12px); }
+        }
+
+        @media (max-width: 1100px) {
+            .workspace {
+                grid-template-columns: 1fr;
+            }
+
+            .panel {
+                min-height: 420px;
+            }
+        }
+
+        @media (max-width: 720px) {
+            .page {
+                padding: 14px;
+            }
+
+            .hero,
+            .toolbar,
+            .panel {
+                border-radius: 24px;
+            }
+
+            .hero,
+            .panel {
+                padding: 18px;
+            }
+
+            .toolbar {
+                padding: 12px;
+            }
+
+            .btn-large {
+                width: 100%;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="page">
+        <main class="app">
+            <section class="hero">
+                <div class="hero-inner">
+                    <div class="kicker">Punctuation Converter</div>
+                    <h1>英文标点转中文标点</h1>
+                    <p>粘贴后可自动转换，也可以点击按钮手动转换。左侧输入原文，右侧直接得到整理后的中文标点结果。</p>
+                </div>
+            </section>
+
+            <section class="toolbar">
+                <div class="toolbar-group">
+                    <button class="btn btn-primary btn-large" id="convertBtn" type="button">转换</button>
+                    <button class="btn btn-large" id="clearBtn" type="button" disabled>清空内容</button>
+                </div>
+                <div class="toolbar-group">
+                    <div class="toolbar-note">粘贴时自动转换</div>
+                    <button class="btn btn-primary btn-large" id="copyBtn" type="button" disabled>复制结果</button>
+                </div>
+            </section>
+
+            <section class="workspace">
+                <section class="panel">
+                    <div class="panel-head">
+                        <div class="panel-title">
+                            <h2>原始文本</h2>
+                            <p>支持直接粘贴英文标点内容。</p>
+                        </div>
+                        <div class="panel-meta" id="inputMeta">0 字</div>
+                    </div>
+                    <div class="panel-strip">
+                        <div class="pill" id="statInput">输入 0 字</div>
+                        <div class="pill">粘贴后自动转换</div>
+                        <div class="pill">手动输入不自动触发</div>
+                    </div>
+                    <textarea class="editor" id="input" spellcheck="false" placeholder="把需要处理的文本粘贴到这里"></textarea>
+                </section>
+
+                <section class="panel">
+                    <div class="panel-head">
+                        <div class="panel-title">
+                            <h2>转换结果</h2>
+                            <p>可直接复制使用。</p>
+                        </div>
+                        <div class="panel-meta" id="outputMeta">0 字</div>
+                    </div>
+                    <div class="panel-strip">
+                        <div class="pill" id="statOutput">输出 0 字</div>
+                        <div class="pill" id="statChanged">处理 0 处</div>
+                        <div class="pill">增强版引号判断</div>
+                    </div>
+                    <textarea class="editor" id="output" spellcheck="false" readonly placeholder="转换结果会显示在这里"></textarea>
+                </section>
+            </section>
+        </main>
+    </div>
+
+    <div class="toast-stack" id="toastStack" aria-live="polite"></div>
+
+    <script>
+        const input = document.getElementById('input');
+        const output = document.getElementById('output');
+        const convertBtn = document.getElementById('convertBtn');
+        const clearBtn = document.getElementById('clearBtn');
+        const copyBtn = document.getElementById('copyBtn');
+        const inputMeta = document.getElementById('inputMeta');
+        const outputMeta = document.getElementById('outputMeta');
+        const statInput = document.getElementById('statInput');
+        const statOutput = document.getElementById('statOutput');
+        const statChanged = document.getElementById('statChanged');
+        const toastStack = document.getElementById('toastStack');
+
+        let pendingPasteAutoConvert = false;
+
+        function showToast(message) {
+            const toast = document.createElement('div');
+            toast.className = 'toast';
+            toast.textContent = message;
+            toastStack.appendChild(toast);
+
+            window.setTimeout(() => {
+                toast.classList.add('is-leaving');
+                window.setTimeout(() => toast.remove(), 220);
+            }, 1800);
+        }
+
+        function isAsciiLetterOrDigit(char) {
+            return /[A-Za-z0-9]/.test(char || '');
+        }
+
+        function isDigit(char) {
+            return /[0-9]/.test(char || '');
+        }
+
+        function isApostrophe(text, index) {
+            const prev = text[index - 1] || '';
+            const next = text[index + 1] || '';
+            return isAsciiLetterOrDigit(prev) && isAsciiLetterOrDigit(next);
+        }
+
+        function isNumericComma(text, index) {
+            const prev = text[index - 1] || '';
+            const next = text[index + 1] || '';
+            return isDigit(prev) && isDigit(next);
+        }
+
+        function isProtectedPeriod(text, index) {
+            const prev = text[index - 1] || '';
+            const next = text[index + 1] || '';
+            return (isDigit(prev) && isDigit(next)) || (isAsciiLetterOrDigit(prev) && isAsciiLetterOrDigit(next));
+        }
+
+        function normalizeDots(text, stats) {
+            return text.replace(/\.{3,}/g, () => {
+                stats.ellipsis += 1;
+                return '……';
+            });
+        }
+
+        function normalizeDashes(text, stats) {
+            return text.replace(/-{2,}/g, () => {
+                stats.dash += 1;
+                return '——';
+            });
+        }
+
+        function tidySpacing(text) {
+            return text
+                .replace(/[ \t]+([，。？！；：、）】》」』”’])/g, '$1')
+                .replace(/([（【《「『“‘])[ \t]+/g, '$1')
+                .replace(/[ \t]+\n/g, '\n')
+                .replace(/\n{3,}/g, '\n\n');
+        }
+
+        function convertPunctuation(text) {
+            const stats = {
+                comma: 0,
+                period: 0,
+                question: 0,
+                exclamation: 0,
+                colon: 0,
+                semicolon: 0,
+                paren: 0,
+                bracket: 0,
+                ellipsis: 0,
+                dash: 0,
+                doubleQuote: 0,
+                singleQuote: 0
+            };
+
+            let normalized = text.replace(/\r\n?/g, '\n');
+            normalized = normalizeDots(normalized, stats);
+            normalized = normalizeDashes(normalized, stats);
+
+            let result = '';
+            let openDoubleQuote = true;
+            let openSingleQuote = true;
+
+            for (let i = 0; i < normalized.length; i += 1) {
+                const char = normalized[i];
+
+                switch (char) {
+                    case ',':
+                        if (isNumericComma(normalized, i)) {
+                            result += char;
+                        } else {
+                            result += '，';
+                            stats.comma += 1;
+                        }
+                        break;
+                    case '.':
+                        if (isProtectedPeriod(normalized, i)) {
+                            result += char;
+                        } else {
+                            result += '。';
+                            stats.period += 1;
+                        }
+                        break;
+                    case '?':
+                        result += '？';
+                        stats.question += 1;
+                        break;
+                    case '!':
+                        result += '！';
+                        stats.exclamation += 1;
+                        break;
+                    case ':':
+                        result += '：';
+                        stats.colon += 1;
+                        break;
+                    case ';':
+                        result += '；';
+                        stats.semicolon += 1;
+                        break;
+                    case '(':
+                        result += '（';
+                        stats.paren += 1;
+                        break;
+                    case ')':
+                        result += '）';
+                        stats.paren += 1;
+                        break;
+                    case '[':
+                        result += '【';
+                        stats.bracket += 1;
+                        break;
+                    case ']':
+                        result += '】';
+                        stats.bracket += 1;
+                        break;
+                    case '"':
+                        result += openDoubleQuote ? '“' : '”';
+                        openDoubleQuote = !openDoubleQuote;
+                        stats.doubleQuote += 1;
+                        break;
+                    case '\'':
+                        if (isApostrophe(normalized, i)) {
+                            result += char;
+                        } else {
+                            result += openSingleQuote ? '‘' : '’';
+                            openSingleQuote = !openSingleQuote;
+                            stats.singleQuote += 1;
+                        }
+                        break;
+                    default:
+                        result += char;
+                        break;
+                }
+            }
+
+            const changedCount = Object.values(stats).reduce((sum, count) => sum + count, 0);
+
+            return {
+                text: tidySpacing(result),
+                changedCount
+            };
+        }
+
+        function updateStats(changedCount = 0) {
+            const inputText = input.value.trim();
+            const outputText = output.value.trim();
+
+            inputMeta.textContent = `${input.value.length} 字`;
+            outputMeta.textContent = `${output.value.length} 字`;
+            statInput.textContent = `输入 ${input.value.length} 字`;
+            statOutput.textContent = `输出 ${output.value.length} 字`;
+            statChanged.textContent = `处理 ${changedCount} 处`;
+            clearBtn.disabled = !inputText && !outputText;
+            copyBtn.disabled = !outputText;
+        }
+
+        function performConversion(showToastMessage = false) {
+            const source = input.value;
+
+            if (!source.trim()) {
+                output.value = '';
+                updateStats(0);
+                if (showToastMessage) {
+                    showToast('没有可转换的内容');
+                }
+                return;
+            }
+
+            const result = convertPunctuation(source);
+            output.value = result.text;
+            updateStats(result.changedCount);
+
+            if (showToastMessage) {
+                showToast(result.changedCount > 0 ? `已处理 ${result.changedCount} 处标点` : '没有检测到需要替换的标点');
+            }
+        }
+
+        async function copyText(text) {
+            if (navigator.clipboard && window.isSecureContext) {
+                await navigator.clipboard.writeText(text);
+                return true;
+            }
+
+            output.focus();
+            output.select();
+            return document.execCommand('copy');
+        }
+
+        convertBtn.addEventListener('click', () => {
+            performConversion(true);
+        });
+
+        clearBtn.addEventListener('click', () => {
+            input.value = '';
+            output.value = '';
+            updateStats(0);
+            showToast('已清空内容');
+            input.focus();
+        });
+
+        copyBtn.addEventListener('click', async () => {
+            if (!output.value.trim()) {
+                showToast('当前没有可复制的结果');
+                return;
+            }
+
+            try {
+                await copyText(output.value);
+                showToast('已复制到剪贴板');
+            } catch {
+                showToast('复制失败，请手动选择文本后复制');
+            }
+        });
+
+        input.addEventListener('paste', () => {
+            pendingPasteAutoConvert = true;
+            window.setTimeout(() => {
+                performConversion(true);
+                pendingPasteAutoConvert = false;
+            }, 0);
+        });
+
+        input.addEventListener('input', () => {
+            if (pendingPasteAutoConvert) {
+                return;
+            }
+
+            updateStats(output.value ? convertPunctuation(input.value).changedCount : 0);
+        });
+
+        input.addEventListener('keydown', (event) => {
+            if ((event.ctrlKey || event.metaKey) && event.key === 'Enter') {
+                event.preventDefault();
+                performConversion(true);
+            }
+        });
+
+        updateStats(0);
+    </script>
+</body>
+</html>
