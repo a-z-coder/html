@@ -1,0 +1,73 @@
+﻿<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex, nofollow">
+  <title>判断文案的长度</title>
+</head>
+<body>
+<pre id="output">{"error":"missing text or texts"}</pre>
+<script>
+  (function () {
+    var params = new URLSearchParams(location.search);
+    var text = params.get('text');
+    var texts = params.get('texts');
+    var output = document.getElementById('output');
+    var minLen = 50;
+    var maxLen = 55;
+    var ignoredChars = new Set(['{', '}', '#']);
+
+    function analyzeText(value) {
+      var length = 0;
+
+      for (var i = 0; i < value.length; i += 1) {
+        if (!ignoredChars.has(value[i])) {
+          length += 1;
+        }
+      }
+
+      return {
+        text: value,
+        length: length,
+        valid: length >= minLen && length <= maxLen,
+        gap: {
+          to_min: length - minLen,
+          to_max: maxLen - length
+        }
+      };
+    }
+
+    if (text !== null) {
+      var singleResult = analyzeText(text);
+      output.textContent = JSON.stringify({
+        length: singleResult.length,
+        valid: singleResult.valid,
+        gap: singleResult.gap
+      });
+      return;
+    }
+
+    if (texts !== null) {
+      var lines = texts.split(/\r?\n/);
+      var results = [];
+
+      for (var lineIndex = 0; lineIndex < lines.length; lineIndex += 1) {
+        var line = lines[lineIndex].trim();
+
+        if (!line) {
+          continue;
+        }
+
+        results.push(analyzeText(line));
+      }
+
+      output.textContent = JSON.stringify({ results: results });
+      return;
+    }
+
+    output.textContent = JSON.stringify({ error: 'missing text or texts' });
+  })();
+</script>
+</body>
+</html>
