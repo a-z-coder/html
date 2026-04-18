@@ -7,12 +7,11 @@
   <title>判断文案的长度</title>
 </head>
 <body>
-<pre id="output">{"error":"missing text or texts"}</pre>
+<pre id="output">[{"error":"missing text"}]</pre>
 <script>
   (function () {
     var params = new URLSearchParams(location.search);
     var text = params.get('text');
-    var texts = params.get('texts');
     var output = document.getElementById('output');
     var minLen = 50;
     var maxLen = 55;
@@ -38,30 +37,25 @@
       };
     }
 
-    if (text !== null) {
-      output.textContent = JSON.stringify(analyzeText(text));
+    if (text === null) {
+      output.textContent = JSON.stringify([{ error: 'missing text' }]);
       return;
     }
 
-    if (texts !== null) {
-      var lines = texts.split(/\r?\n/);
-      var results = [];
+    var parts = text.split('#');
+    var results = [];
 
-      for (var lineIndex = 0; lineIndex < lines.length; lineIndex += 1) {
-        var line = lines[lineIndex].trim();
+    for (var index = 0; index < parts.length; index += 1) {
+      var item = parts[index].trim();
 
-        if (!line) {
-          continue;
-        }
-
-        results.push(analyzeText(line));
+      if (!item) {
+        continue;
       }
 
-      output.textContent = JSON.stringify({ results: results });
-      return;
+      results.push(analyzeText(item));
     }
 
-    output.textContent = JSON.stringify({ error: 'missing text or texts' });
+    output.textContent = JSON.stringify(results);
   })();
 </script>
 </body>
