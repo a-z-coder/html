@@ -1,0 +1,888 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex, nofollow">
+  <meta name="color-scheme" content="light">
+  <title>Notion转WPS云的Word</title>
+  <style>
+    :root {
+      color: #17191d;
+      background: #eef0f3;
+      font-family: "Microsoft YaHei UI", "Microsoft YaHei", system-ui, sans-serif;
+      font-synthesis: none;
+      --blue: #2478d1;
+      --blue-hover: #1768bd;
+      --blue-soft: #eaf3fd;
+      --green: #167455;
+      --amber: #8a5b12;
+      --red: #b43737;
+      --border: #dfe3e8;
+      --muted: #6f7782;
+      --panel: #ffffff;
+      --field: #fafbfc;
+      --shadow: 0 16px 38px rgba(25, 32, 42, 0.08);
+    }
+
+    * {
+      box-sizing: border-box;
+      letter-spacing: 0;
+    }
+
+    html { min-width: 320px; }
+
+    body {
+      min-height: 100vh;
+      margin: 0;
+      background: #eef0f3;
+    }
+
+    button,
+    textarea {
+      font: inherit;
+    }
+
+    button {
+      min-height: 40px;
+      border-radius: 6px;
+      cursor: pointer;
+    }
+
+    button:focus-visible,
+    textarea:focus-visible {
+      outline: 3px solid rgba(36, 120, 209, 0.24);
+      outline-offset: 2px;
+    }
+
+    button:disabled {
+      cursor: not-allowed;
+      opacity: 0.52;
+    }
+
+    .app-shell {
+      width: min(1540px, calc(100% - 40px));
+      margin: 24px auto 32px;
+    }
+
+    .intro {
+      padding: 30px 36px;
+      border: 1px solid rgba(255, 255, 255, 0.92);
+      border-top: 4px solid var(--blue);
+      border-radius: 8px;
+      background: var(--panel);
+      box-shadow: var(--shadow);
+    }
+
+    .eyebrow {
+      display: inline-flex;
+      gap: 9px;
+      align-items: center;
+      min-height: 30px;
+      padding: 5px 10px;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      color: #59616c;
+      font-size: 12px;
+      font-weight: 650;
+      text-transform: uppercase;
+    }
+
+    .eyebrow-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--blue);
+    }
+
+    h1 {
+      max-width: 900px;
+      margin: 18px 0 10px;
+      font-size: 42px;
+      font-weight: 760;
+      line-height: 1.18;
+    }
+
+    .intro p {
+      max-width: 900px;
+      margin: 0;
+      color: var(--muted);
+      font-size: 16px;
+      line-height: 1.8;
+    }
+
+    .action-bar {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+      margin-top: 16px;
+      padding: 14px 16px;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      background: var(--panel);
+      box-shadow: var(--shadow);
+    }
+
+    .button-secondary {
+      padding: 8px 16px;
+      border: 1px solid var(--border);
+      background: #ffffff;
+      color: #303640;
+    }
+
+    .button-secondary:hover:not(:disabled) {
+      border-color: #c8ced6;
+      background: #f7f8f9;
+    }
+
+    .button-primary {
+      min-width: 190px;
+      padding: 9px 22px;
+      border: 1px solid var(--blue);
+      background: var(--blue);
+      color: #ffffff;
+      font-weight: 700;
+    }
+
+    .button-primary:hover:not(:disabled) {
+      border-color: var(--blue-hover);
+      background: var(--blue-hover);
+    }
+
+    .action-spacer { flex: 1; }
+
+    .action-note {
+      color: var(--muted);
+      font-size: 13px;
+      white-space: nowrap;
+    }
+
+    .status {
+      min-height: 20px;
+      margin-top: 10px;
+      padding: 0 2px;
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.5;
+    }
+
+    .status[data-tone="success"] { color: var(--green); }
+    .status[data-tone="warning"] { color: var(--amber); }
+    .status[data-tone="error"] { color: var(--red); }
+
+    .workspace {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+      gap: 16px;
+      margin-top: 16px;
+    }
+
+    .work-panel {
+      min-width: 0;
+      overflow: hidden;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      background: var(--panel);
+      box-shadow: var(--shadow);
+    }
+
+    .panel-head {
+      display: flex;
+      gap: 18px;
+      align-items: flex-start;
+      justify-content: space-between;
+      min-height: 94px;
+      padding: 20px 22px 16px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .panel-title {
+      margin: 0 0 7px;
+      font-size: 18px;
+      font-weight: 700;
+      line-height: 1.35;
+    }
+
+    .panel-description {
+      margin: 0;
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.55;
+    }
+
+    .panel-count {
+      flex: 0 0 auto;
+      color: var(--muted);
+      font-size: 13px;
+      white-space: nowrap;
+    }
+
+    .panel-meta {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      padding: 12px 22px;
+      border-bottom: 1px solid var(--border);
+      background: #fcfcfd;
+    }
+
+    .meta-item {
+      padding: 5px 8px;
+      border: 1px solid var(--border);
+      border-radius: 5px;
+      color: #69717c;
+      background: #ffffff;
+      font-size: 12px;
+      white-space: nowrap;
+    }
+
+    .editor-wrap,
+    .preview-wrap {
+      min-height: 500px;
+      padding: 16px;
+    }
+
+    #source {
+      display: block;
+      width: 100%;
+      min-height: 468px;
+      resize: vertical;
+      padding: 18px;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      outline: 0;
+      background: var(--field);
+      color: #20242a;
+      font-family: Consolas, "Microsoft YaHei", monospace;
+      font-size: 14px;
+      line-height: 1.75;
+      tab-size: 4;
+    }
+
+    #source::placeholder { color: #a0a7b0; }
+
+    #preview {
+      min-height: 468px;
+      overflow-wrap: anywhere;
+      padding: 18px 20px;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      background: var(--field);
+      color: #15181d;
+      font-family: "Microsoft YaHei", sans-serif;
+      font-size: 10.5pt;
+      line-height: 1.75;
+    }
+
+    .preview-empty {
+      color: #a0a7b0;
+      font-size: 14px;
+    }
+
+    .preview-heading {
+      margin: 0 0 0.55em;
+      font-weight: 700;
+      line-height: 1.4;
+    }
+
+    .preview-heading[data-level="1"] { font-size: 22pt; }
+    .preview-heading[data-level="2"] { font-size: 18pt; }
+    .preview-heading[data-level="3"] { font-size: 15pt; }
+    .preview-heading[data-level="4"] { font-size: 12pt; }
+    .preview-heading[data-level="5"],
+    .preview-heading[data-level="6"] { font-size: 10.5pt; }
+
+    .preview-paragraph { margin: 0; }
+    .preview-blank { height: 1.2em; }
+
+    .preview-list-line {
+      display: grid;
+      grid-template-columns: 48px minmax(0, 1fr);
+      align-items: baseline;
+      min-height: 1.75em;
+      padding-left: calc(var(--depth, 0) * 28px);
+    }
+
+    .preview-marker {
+      justify-self: end;
+      padding-right: 12px;
+      white-space: nowrap;
+    }
+
+    .preview-list-text { min-width: 0; }
+
+    .inline-code {
+      padding: 1px 4px;
+      border-radius: 4px;
+      background: #edf0f3;
+      font-family: Consolas, "Courier New", monospace;
+      font-size: 0.94em;
+    }
+
+    .preview-link {
+      color: #075fb3;
+      text-decoration: underline;
+    }
+
+    .copy-frame {
+      position: fixed;
+      left: -10000px;
+      top: 0;
+      width: 2px;
+      height: 2px;
+      border: 0;
+      opacity: 0;
+      pointer-events: none;
+    }
+
+    @media (max-width: 900px) {
+      .app-shell { width: min(100% - 24px, 1540px); margin-top: 12px; }
+      .intro { padding: 24px; }
+      h1 { font-size: 34px; }
+      .workspace { grid-template-columns: 1fr; }
+      .editor-wrap,
+      .preview-wrap { min-height: 400px; }
+      #source,
+      #preview { min-height: 370px; }
+    }
+
+    @media (max-width: 620px) {
+      .app-shell { width: min(100% - 16px, 1540px); }
+      .intro { padding: 20px 18px; }
+      h1 { font-size: 30px; }
+      .intro p { font-size: 14px; }
+      .action-bar { align-items: stretch; flex-direction: column; }
+      .action-spacer { display: none; }
+      .action-note { white-space: normal; }
+      .button-primary { width: 100%; }
+      .panel-head { min-height: 0; padding: 18px 16px 14px; }
+      .panel-meta { padding: 10px 16px; }
+      .editor-wrap,
+      .preview-wrap { padding: 12px; }
+      .preview-list-line { grid-template-columns: 42px minmax(0, 1fr); }
+      .preview-list-line { padding-left: calc(var(--depth, 0) * 16px); }
+    }
+  </style>
+</head>
+<body>
+  <main class="app-shell">
+    <header class="intro">
+      <div class="eyebrow"><span class="eyebrow-dot" aria-hidden="true"></span>NOTION → WPS WORD</div>
+      <h1>Notion 转 WPS 云 Word</h1>
+      <p>粘贴带四空格层级的 Notion Markdown，页面会生成 WPS 可识别的原生多级编号，并保留标题、加粗、斜体、删除线、行内代码与链接。</p>
+    </header>
+
+    <section class="action-bar" aria-label="操作栏">
+      <button id="sample-button" class="button-secondary" type="button">填入示例</button>
+      <button id="clear-button" class="button-secondary" type="button">清空内容</button>
+      <span class="action-spacer" aria-hidden="true"></span>
+      <span class="action-note">输入时自动转换，无需额外点击</span>
+      <button id="copy-button" class="button-primary" type="button" disabled>复制到 WPS</button>
+    </section>
+    <div id="status" class="status" role="status" aria-live="polite"></div>
+
+    <section class="workspace">
+      <article class="work-panel">
+        <div class="panel-head">
+          <div>
+            <h2 class="panel-title">Notion Markdown</h2>
+            <p class="panel-description">每深入一级增加 4 个空格，编号统一写成 1.</p>
+          </div>
+          <span id="source-count" class="panel-count">0 行 · 0 字</span>
+        </div>
+        <div class="panel-meta">
+          <span class="meta-item">每级 4 空格</span>
+          <span class="meta-item">支持 1–9 级</span>
+          <span class="meta-item">自动预览</span>
+        </div>
+        <div class="editor-wrap">
+          <textarea id="source" aria-label="Notion Markdown 输入" spellcheck="false" placeholder="# 标题&#10;&#10;1. 一级&#10;    1. 二级&#10;        1. 三级&#10;&#10;普通正文支持 **加粗**。"></textarea>
+        </div>
+      </article>
+
+      <article class="work-panel">
+        <div class="panel-head">
+          <div>
+            <h2 class="panel-title">WPS 排版预览</h2>
+            <p class="panel-description">实际粘贴结果由 WPS 原生编号引擎生成</p>
+          </div>
+          <span id="output-count" class="panel-count">0 个内容块</span>
+        </div>
+        <div class="panel-meta">
+          <span id="level-stat" class="meta-item">最大层级 0</span>
+          <span id="list-stat" class="meta-item">列表项 0</span>
+          <span class="meta-item">微软雅黑五号</span>
+        </div>
+        <div class="preview-wrap">
+          <div id="preview" aria-label="WPS 排版预览"><span class="preview-empty">转换结果会显示在这里</span></div>
+        </div>
+      </article>
+    </section>
+  </main>
+
+  <iframe id="copy-frame" class="copy-frame" aria-hidden="true" tabindex="-1"></iframe>
+
+  <script>
+    "use strict";
+
+    const LEVELS = [
+      { format: "decimal", text: "%1.", suffix: "tab" },
+      { format: "decimal", text: "(%2)", suffix: "tab" },
+      { format: "decimal-enclosed-circle-chinese", text: "%3", suffix: "tab" },
+      { format: "decimal", text: "%4)", suffix: "tab" },
+      { format: "alpha-lower", text: "%5.", suffix: "tab" },
+      { format: "alpha-lower", text: "%6)", suffix: "tab" },
+      { format: "lower-roman", text: "%7.", suffix: "tab" },
+      { format: "lower-roman", text: "%8)", suffix: "tab" },
+      { format: "alpha-lower", text: "%9.", suffix: "tab" }
+    ];
+
+    const SAMPLE = `# 项目推广渠道
+
+普通正文使用微软雅黑五号，支持 **重点内容**、*斜体说明*、~~删除内容~~ 和 \`行内代码\`。
+
+1. 小红书推广平台
+    1. 薯条推广，轻量化移动端内容加热工具
+        1. 移动端直接推广
+        1. 支持 **重点投放**
+            1. 第四级内容
+    1. 聚光平台，信息流广告线索获客
+        1. [小红书广告平台](https://ad.xiaohongshu.com/)
+1. 小红书受众
+    1. 来自千瓜数据`;
+
+    const source = document.querySelector("#source");
+    const preview = document.querySelector("#preview");
+    const copyButton = document.querySelector("#copy-button");
+    const sampleButton = document.querySelector("#sample-button");
+    const clearButton = document.querySelector("#clear-button");
+    const status = document.querySelector("#status");
+    const sourceCount = document.querySelector("#source-count");
+    const outputCount = document.querySelector("#output-count");
+    const levelStat = document.querySelector("#level-stat");
+    const listStat = document.querySelector("#list-stat");
+    const copyFrame = document.querySelector("#copy-frame");
+
+    let latestConversion = null;
+    let updateQueued = false;
+
+    function escapeHtml(value) {
+      return String(value)
+        .replaceAll("&", "&amp;")
+        .replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;")
+        .replaceAll('"', "&quot;")
+        .replaceAll("'", "&#39;");
+    }
+
+    function safeUrl(value) {
+      const url = value.trim();
+      return /^(https?:\/\/|mailto:|tel:)/i.test(url) ? url : "";
+    }
+
+    function findClosing(text, marker, start) {
+      const index = text.indexOf(marker, start + marker.length);
+      return index > start + marker.length ? index : -1;
+    }
+
+    function renderInline(text, depth = 0) {
+      if (depth > 12) return escapeHtml(text);
+      let html = "";
+      let index = 0;
+
+      while (index < text.length) {
+        if (text[index] === "`") {
+          const end = text.indexOf("`", index + 1);
+          if (end > index + 1) {
+            html += `<span class="inline-code" style="font-family:Consolas,'Courier New',monospace;background:#edf0f3;">${escapeHtml(text.slice(index + 1, end))}</span>`;
+            index = end + 1;
+            continue;
+          }
+        }
+
+        if (text[index] === "[") {
+          const labelEnd = text.indexOf("]", index + 1);
+          if (labelEnd > index + 1 && text[labelEnd + 1] === "(") {
+            const urlEnd = text.indexOf(")", labelEnd + 2);
+            if (urlEnd > labelEnd + 2) {
+              const label = text.slice(index + 1, labelEnd);
+              const rawUrl = text.slice(labelEnd + 2, urlEnd);
+              const url = safeUrl(rawUrl);
+              html += url
+                ? `<a class="preview-link" href="${escapeHtml(url)}" style="color:#075fb3;text-decoration:underline;">${renderInline(label, depth + 1)}</a>`
+                : `${renderInline(label, depth + 1)} (${escapeHtml(rawUrl)})`;
+              index = urlEnd + 1;
+              continue;
+            }
+          }
+        }
+
+        const formats = [
+          { marker: "***", style: "font-weight:bold;font-style:italic;" },
+          { marker: "___", style: "font-weight:bold;font-style:italic;" },
+          { marker: "**", style: "font-weight:bold;" },
+          { marker: "__", style: "font-weight:bold;" },
+          { marker: "~~", style: "text-decoration:line-through;" },
+          { marker: "*", style: "font-style:italic;" },
+          { marker: "_", style: "font-style:italic;" }
+        ];
+
+        let matched = false;
+        for (const format of formats) {
+          if (!text.startsWith(format.marker, index)) continue;
+          const end = findClosing(text, format.marker, index);
+          if (end === -1) continue;
+          const inner = text.slice(index + format.marker.length, end);
+          html += `<span style="${format.style}">${renderInline(inner, depth + 1)}</span>`;
+          index = end + format.marker.length;
+          matched = true;
+          break;
+        }
+        if (matched) continue;
+
+        html += escapeHtml(text[index]);
+        index += 1;
+      }
+      return html;
+    }
+
+    function inlineToPlain(text) {
+      return text
+        .replace(/\[([^\]]+)\]\(([^)]+)\)/g, (match, label, url) => label === url ? label : `${label} (${url})`)
+        .replace(/`([^`]+)`/g, "$1")
+        .replace(/\*\*\*([^*]+)\*\*\*/g, "$1")
+        .replace(/___([^_]+)___/g, "$1")
+        .replace(/\*\*([^*]+)\*\*/g, "$1")
+        .replace(/__([^_]+)__/g, "$1")
+        .replace(/~~([^~]+)~~/g, "$1")
+        .replace(/\*([^*]+)\*/g, "$1")
+        .replace(/_([^_]+)_/g, "$1");
+    }
+
+    function indentWidth(prefix) {
+      let width = 0;
+      for (const char of prefix) width += char === "\t" ? 4 : 1;
+      return width;
+    }
+
+    function parseDocument(input) {
+      const normalized = input.replace(/\r\n?/g, "\n").replaceAll("\u00a0", " ");
+      const lines = normalized === "" ? [] : normalized.split("\n");
+      const blocks = [];
+      const diagnostics = [];
+      let activeGroup = -1;
+      let groupCount = 0;
+      let previousLevel = 0;
+      let counters = Array(9).fill(0);
+      let listItems = 0;
+      let maxLevel = 0;
+
+      lines.forEach((line, lineIndex) => {
+        if (line.trim() === "") {
+          blocks.push({ type: "blank" });
+          activeGroup = -1;
+          previousLevel = 0;
+          return;
+        }
+
+        const listMatch = line.match(/^([ \t]*)(\d+)\.[ \t]+(.*)$/);
+        if (listMatch) {
+          const width = indentWidth(listMatch[1]);
+          let level = Math.floor(width / 4) + 1;
+          if (width % 4 !== 0) {
+            diagnostics.push(`第 ${lineIndex + 1} 行缩进不是 4 的倍数，已按最接近的较浅层级处理。`);
+          }
+          if (level > 9) {
+            diagnostics.push(`第 ${lineIndex + 1} 行超过 9 级，已限制为第 9 级。`);
+            level = 9;
+          }
+          if (previousLevel > 0 && level > previousLevel + 1) {
+            diagnostics.push(`第 ${lineIndex + 1} 行跨越了层级，已调整为第 ${previousLevel + 1} 级。`);
+            level = previousLevel + 1;
+          }
+          if (activeGroup === -1) {
+            activeGroup = groupCount;
+            groupCount += 1;
+            counters = Array(9).fill(0);
+          }
+
+          counters[level - 1] += 1;
+          for (let deeper = level; deeper < counters.length; deeper += 1) counters[deeper] = 0;
+          blocks.push({
+            type: "listItem",
+            text: listMatch[3],
+            level,
+            index: counters[level - 1],
+            group: activeGroup
+          });
+          previousLevel = level;
+          listItems += 1;
+          maxLevel = Math.max(maxLevel, level);
+          return;
+        }
+
+        activeGroup = -1;
+        previousLevel = 0;
+        const headingMatch = line.match(/^(#{1,6})[ \t]+(.+)$/);
+        if (headingMatch) {
+          blocks.push({ type: "heading", level: headingMatch[1].length, text: headingMatch[2].trim() });
+        } else {
+          blocks.push({ type: "paragraph", text: line });
+        }
+      });
+
+      return {
+        normalized,
+        lines,
+        blocks,
+        diagnostics,
+        groupCount,
+        stats: { listItems, maxLevel, blockCount: blocks.filter(block => block.type !== "blank").length }
+      };
+    }
+
+    function toLetters(value) {
+      let number = Math.max(1, value);
+      let result = "";
+      while (number > 0) {
+        number -= 1;
+        result = String.fromCharCode(97 + (number % 26)) + result;
+        number = Math.floor(number / 26);
+      }
+      return result;
+    }
+
+    function toRoman(value) {
+      const pairs = [
+        [1000, "m"], [900, "cm"], [500, "d"], [400, "cd"],
+        [100, "c"], [90, "xc"], [50, "l"], [40, "xl"],
+        [10, "x"], [9, "ix"], [5, "v"], [4, "iv"], [1, "i"]
+      ];
+      let number = Math.max(1, value);
+      let result = "";
+      for (const [amount, symbol] of pairs) {
+        while (number >= amount) {
+          result += symbol;
+          number -= amount;
+        }
+      }
+      return result;
+    }
+
+    function markerFor(level, index, asHtml = false) {
+      if (level === 1) return `${index}.`;
+      if (level === 2) return `(${index})`;
+      if (level === 3) {
+        if (index <= 20) return asHtml ? `&#${9311 + index};` : String.fromCodePoint(9311 + index);
+        return `(${index})`;
+      }
+      if (level === 4) return `${index})`;
+      if (level === 5) return `${toLetters(index)}.`;
+      if (level === 6) return `${toLetters(index)})`;
+      if (level === 7) return `${toRoman(index)}.`;
+      if (level === 8) return `${toRoman(index)})`;
+      return `${toLetters(index)}.`;
+    }
+
+    function levelDefinition(group, level) {
+      const item = LEVELS[level - 1];
+      const tabStop = level === 1 ? 21.25 : level * 21;
+      const indent = level === 1 ? -21.25 : -21;
+      return `@list l${group}:level${level}{
+  mso-level-number-format:${item.format};
+  mso-level-suffix:${item.suffix};
+  mso-level-text:"${item.text}";
+  mso-level-tab-stop:${tabStop.toFixed(4)}pt;
+  mso-level-number-position:left;
+  margin-left:${tabStop.toFixed(4)}pt;
+  text-indent:${indent.toFixed(4)}pt;
+  tab-stops:blank ${tabStop.toFixed(4)}pt;
+  font-family:'Times New Roman';}`;
+    }
+
+    function listDefinitions(groupCount) {
+      let css = "";
+      for (let group = 0; group < groupCount; group += 1) {
+        for (let level = 1; level <= LEVELS.length; level += 1) {
+          css += `${levelDefinition(group, level)}\n`;
+        }
+      }
+      return css;
+    }
+
+    function baseTextStyle(size = 10.5, weight = "normal") {
+      return `mso-spacerun:'yes';font-family:微软雅黑;mso-ascii-font-family:Arial;mso-hansi-font-family:Arial;mso-bidi-font-family:'Times New Roman';font-size:${size.toFixed(4)}pt;font-weight:${weight};`;
+    }
+
+    function wpsText(text, size = 10.5, weight = "normal") {
+      return `<span style="${baseTextStyle(size, weight)}"><font face="微软雅黑">${renderInline(text)}</font></span>`;
+    }
+
+    function wpsTail() {
+      return `<span style="font-family:Arial;mso-fareast-font-family:微软雅黑;mso-bidi-font-family:'Times New Roman';font-size:10.5000pt;font-weight:normal;"><o:p></o:p></span>`;
+    }
+
+    function wpsListParagraph(block) {
+      const tabStop = block.level === 1 ? 21.25 : block.level * 21;
+      const paragraphMargin = block.level === 1 ? 21.25 : tabStop + 0.25;
+      const marker = markerFor(block.level, block.index, true);
+      return `<p class="MsoNormal" style="margin-left:${paragraphMargin.toFixed(4)}pt;mso-para-margin-left:0.0000gd;text-indent:-21.2500pt;mso-char-indent-count:0.0000;tab-stops:left blank ${tabStop.toFixed(4)}pt;mso-list:l${block.group} level${block.level} lfo${block.group + 1};"><![if !supportLists]><span style="font-family:Arial;mso-fareast-font-family:微软雅黑;mso-bidi-font-family:'Times New Roman';font-size:10.5000pt;font-weight:normal;"><span style="mso-list:Ignore;">${marker}<span>&nbsp;</span></span></span><![endif]>${wpsText(block.text)}${wpsTail()}</p>`;
+    }
+
+    function wpsNormalParagraph(text) {
+      return `<p class="MsoNormal" style="margin:0;font-family:Arial;mso-fareast-font-family:微软雅黑;font-size:10.5000pt;font-weight:normal;">${wpsText(text)}${wpsTail()}</p>`;
+    }
+
+    function wpsHeading(block) {
+      const sizes = [22, 18, 15, 12, 10.5, 10.5];
+      const size = sizes[block.level - 1];
+      const top = block.level <= 2 ? 12 : 8;
+      const bottom = block.level <= 3 ? 6 : 4;
+      return `<p class="MsoNormal" style="margin-top:${top}.0000pt;margin-right:0;margin-bottom:${bottom}.0000pt;margin-left:0;font-family:微软雅黑;font-size:${size.toFixed(4)}pt;font-weight:bold;">${wpsText(block.text, size, "bold")}${wpsTail()}</p>`;
+    }
+
+    function wpsBlankParagraph() {
+      return `<p class="MsoNormal" style="margin:0;font-family:微软雅黑;font-size:10.5000pt;font-weight:normal;"><span style="${baseTextStyle()}">&nbsp;<o:p></o:p></span></p>`;
+    }
+
+    function plainTextFromBlocks(blocks) {
+      return blocks.map(block => {
+        if (block.type === "blank") return "";
+        if (block.type === "heading" || block.type === "paragraph") return inlineToPlain(block.text);
+        return `${"    ".repeat(block.level - 1)}${markerFor(block.level, block.index)} ${inlineToPlain(block.text)}`;
+      }).join("\r\n");
+    }
+
+    function buildWpsHtml(documentModel) {
+      const content = documentModel.blocks.map(block => {
+        if (block.type === "listItem") return wpsListParagraph(block);
+        if (block.type === "heading") return wpsHeading(block);
+        if (block.type === "blank") return wpsBlankParagraph();
+        return wpsNormalParagraph(block.text);
+      }).join("\n");
+
+      return `<!DOCTYPE html>
+<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:w="urn:schemas-microsoft-com:office:word" xmlns:dt="uuid:C2F41010-65B3-11d1-A29F-00AA00C14882" xmlns="http://www.w3.org/TR/REC-html40">
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+<meta name="ProgId" content="Word.Document">
+<meta name="Generator" content="Microsoft Word 14">
+<meta name="Originator" content="Microsoft Word 14">
+<style>
+${listDefinitions(documentModel.groupCount)}
+p.MsoNormal{margin-top:0;margin-right:0;margin-bottom:0;margin-left:0;font-family:Arial;mso-fareast-font-family:微软雅黑;mso-bidi-font-family:'Times New Roman';font-size:10.5000pt;font-weight:normal;}
+</style>
+</head>
+<body style="tab-interval:21pt;text-justify-trim:punctuation;">
+<div ksdocclipboard="ksDocClipboardId:'{575a5e18-43e6-cbbc-3c2b-112fc0e00d81-544912642074}';from:'wps';priorityFormat:'Kingsoft WPS 9.0 Format,Kingsoft Image Data,text/html,text/plain,Kingsoft Data Descriptor';mimetypes:'Kingsoft WPS 9.0 Format;Kingsoft Image Data;text/html;text/plain;Kingsoft Data Descriptor';dataType:'';srcRange:'';ext:'e30='">
+<!--StartFragment-->
+${content}
+<!--EndFragment-->
+</div>
+</body>
+</html>`;
+    }
+
+    function renderPreview(documentModel) {
+      if (!documentModel.blocks.length) return `<span class="preview-empty">转换结果会显示在这里</span>`;
+      return documentModel.blocks.map(block => {
+        if (block.type === "blank") return `<div class="preview-blank" aria-hidden="true"></div>`;
+        if (block.type === "heading") return `<div class="preview-heading" data-level="${block.level}">${renderInline(block.text)}</div>`;
+        if (block.type === "paragraph") return `<p class="preview-paragraph">${renderInline(block.text)}</p>`;
+        return `<div class="preview-list-line" style="--depth:${block.level - 1}"><span class="preview-marker">${escapeHtml(markerFor(block.level, block.index))}</span><span class="preview-list-text">${renderInline(block.text)}</span></div>`;
+      }).join("");
+    }
+
+    function convert(input) {
+      const documentModel = parseDocument(input);
+      return {
+        documentModel,
+        officeHtml: buildWpsHtml(documentModel),
+        plainText: plainTextFromBlocks(documentModel.blocks),
+        previewHtml: renderPreview(documentModel)
+      };
+    }
+
+    function announce(message, tone = "") {
+      status.textContent = message;
+      status.dataset.tone = tone;
+    }
+
+    function updateInterface() {
+      updateQueued = false;
+      latestConversion = convert(source.value);
+      const model = latestConversion.documentModel;
+      preview.innerHTML = latestConversion.previewHtml;
+      sourceCount.textContent = `${model.lines.length} 行 · ${source.value.length} 字`;
+      outputCount.textContent = `${model.stats.blockCount} 个内容块`;
+      levelStat.textContent = `最大层级 ${model.stats.maxLevel}`;
+      listStat.textContent = `列表项 ${model.stats.listItems}`;
+      copyButton.disabled = model.stats.blockCount === 0;
+      copyFrame.srcdoc = latestConversion.officeHtml;
+
+      if (model.diagnostics.length) {
+        announce(model.diagnostics[0], "warning");
+      } else if (model.stats.blockCount > 0) {
+        announce("内容已转换，可以复制到 WPS。", "success");
+      } else {
+        announce("");
+      }
+    }
+
+    function scheduleUpdate() {
+      if (updateQueued) return;
+      updateQueued = true;
+      requestAnimationFrame(updateInterface);
+    }
+
+    function fallbackCopy() {
+      const doc = copyFrame.contentDocument;
+      const view = copyFrame.contentWindow;
+      if (!doc || !doc.body || !view) return false;
+      const selection = view.getSelection();
+      const range = doc.createRange();
+      range.selectNodeContents(doc.body);
+      selection.removeAllRanges();
+      selection.addRange(range);
+      view.focus();
+      const copied = doc.execCommand("copy");
+      selection.removeAllRanges();
+      return copied;
+    }
+
+    async function copyToWps() {
+      if (!latestConversion || latestConversion.documentModel.stats.blockCount === 0) return;
+      try {
+        if (!navigator.clipboard || !window.ClipboardItem) throw new Error("ClipboardItem unavailable");
+        const item = new ClipboardItem({
+          "text/html": new Blob([latestConversion.officeHtml], { type: "text/html" }),
+          "text/plain": new Blob([latestConversion.plainText], { type: "text/plain" })
+        });
+        await navigator.clipboard.write([item]);
+        announce("已复制 WPS 富文本，请直接粘贴到 WPS 云 Word。", "success");
+      } catch (error) {
+        const copied = fallbackCopy();
+        announce(
+          copied ? "已使用兼容模式复制，请粘贴到 WPS 检查格式。" : "浏览器拒绝访问剪贴板，请改用最新版 Edge 或 Chrome。",
+          copied ? "warning" : "error"
+        );
+      }
+    }
+
+    source.addEventListener("input", scheduleUpdate);
+    copyButton.addEventListener("click", copyToWps);
+    sampleButton.addEventListener("click", () => {
+      source.value = SAMPLE;
+      source.focus();
+      updateInterface();
+    });
+    clearButton.addEventListener("click", () => {
+      source.value = "";
+      source.focus();
+      updateInterface();
+    });
+
+    updateInterface();
+  </script>
+</body>
+</html>
