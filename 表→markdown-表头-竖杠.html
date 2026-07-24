@@ -1,0 +1,1115 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="robots" content="noindex, nofollow">
+    <meta name="description" content="在浏览器本地将粘贴的表格转换为标准 Markdown 表格。">
+    <title>表→markdown-表头-竖杠</title>
+    <style>
+        :root {
+            color-scheme: light;
+            --page: #eef1f4;
+            --surface: #ffffff;
+            --surface-soft: #f7f9fb;
+            --surface-blue: #f1f7fe;
+            --line: #dce1e7;
+            --line-strong: #cbd3dc;
+            --text: #15171a;
+            --muted: #69717c;
+            --placeholder: #929aa5;
+            --accent: #0877db;
+            --accent-hover: #0069c7;
+            --accent-soft: #e5f2ff;
+            --success: #177245;
+            --focus: rgba(8, 119, 219, 0.23);
+            --shadow: 0 20px 54px rgba(31, 42, 55, 0.09);
+            --radius-large: 26px;
+            --radius-panel: 20px;
+            --radius-control: 14px;
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        html {
+            min-height: 100%;
+            background: var(--page);
+        }
+
+        body {
+            min-width: 320px;
+            min-height: 100vh;
+            margin: 0;
+            color: var(--text);
+            background: var(--page);
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+            letter-spacing: 0;
+        }
+
+        button,
+        textarea {
+            font: inherit;
+            letter-spacing: 0;
+        }
+
+        button {
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        .page {
+            width: min(100%, 1580px);
+            min-height: 100vh;
+            margin: 0 auto;
+            padding: 24px;
+        }
+
+        .app {
+            display: grid;
+            grid-template-rows: auto auto minmax(0, 1fr);
+            gap: 18px;
+            min-height: calc(100vh - 48px);
+        }
+
+        .hero,
+        .toolbar,
+        .panel {
+            border: 1px solid var(--line);
+            background: var(--surface);
+            box-shadow: var(--shadow);
+        }
+
+        .hero {
+            position: relative;
+            overflow: hidden;
+            padding: 30px 34px 32px;
+            border-radius: var(--radius-large);
+            background: linear-gradient(120deg, #ffffff 0%, #fbfdff 62%, #edf6ff 100%);
+        }
+
+        .hero::before {
+            position: absolute;
+            inset: 0 auto 0 0;
+            width: 5px;
+            background: var(--accent);
+            content: "";
+        }
+
+        .hero-inner {
+            position: relative;
+            display: grid;
+            gap: 16px;
+            max-width: 860px;
+        }
+
+        .kicker {
+            display: inline-flex;
+            align-items: center;
+            width: fit-content;
+            min-height: 36px;
+            gap: 9px;
+            padding: 0 13px;
+            border: 1px solid var(--line);
+            border-radius: 999px;
+            color: var(--muted);
+            background: rgba(255, 255, 255, 0.82);
+            font-size: 13px;
+            font-weight: 600;
+        }
+
+        .kicker-dot {
+            width: 8px;
+            height: 8px;
+            flex: 0 0 auto;
+            border-radius: 50%;
+            background: var(--accent);
+        }
+
+        .hero h1 {
+            margin: 0;
+            color: #0d0f12;
+            font-size: 46px;
+            line-height: 1.12;
+            font-weight: 760;
+        }
+
+        .hero p {
+            max-width: 760px;
+            margin: 0;
+            color: var(--muted);
+            font-size: 16px;
+            line-height: 1.8;
+        }
+
+        .toolbar {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 16px;
+            padding: 14px 16px;
+            border-radius: var(--radius-large);
+        }
+
+        .toolbar-group {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            min-width: 0;
+        }
+
+        .toolbar-state {
+            min-width: 0;
+            margin: 0;
+            overflow: hidden;
+            color: var(--muted);
+            font-size: 14px;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .toolbar-state.is-ready {
+            color: var(--success);
+        }
+
+        .button {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            min-width: 136px;
+            min-height: 48px;
+            gap: 9px;
+            padding: 0 20px;
+            border: 1px solid var(--line-strong);
+            border-radius: 999px;
+            color: var(--text);
+            background: #ffffff;
+            cursor: pointer;
+            font-weight: 650;
+            transition: background-color 160ms ease, border-color 160ms ease, box-shadow 160ms ease, transform 160ms ease;
+        }
+
+        .button:hover:not(:disabled) {
+            border-color: #b9c3ce;
+            background: var(--surface-soft);
+            box-shadow: 0 8px 20px rgba(31, 42, 55, 0.08);
+            transform: translateY(-1px);
+        }
+
+        .button:active:not(:disabled) {
+            transform: translateY(0);
+        }
+
+        .button-primary {
+            min-width: 162px;
+            border-color: var(--accent);
+            color: #ffffff;
+            background: var(--accent);
+        }
+
+        .button-primary:hover:not(:disabled) {
+            border-color: var(--accent-hover);
+            background: var(--accent-hover);
+        }
+
+        .button:disabled {
+            opacity: 0.42;
+            cursor: not-allowed;
+        }
+
+        .button-icon {
+            width: 18px;
+            height: 18px;
+            flex: 0 0 auto;
+            fill: none;
+            stroke: currentColor;
+            stroke-linecap: round;
+            stroke-linejoin: round;
+            stroke-width: 2;
+        }
+
+        .workspace {
+            display: grid;
+            grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+            gap: 18px;
+            min-height: 0;
+        }
+
+        .panel {
+            display: grid;
+            grid-template-rows: auto auto minmax(380px, 1fr);
+            gap: 14px;
+            min-width: 0;
+            min-height: 570px;
+            padding: 20px;
+            border-radius: var(--radius-panel);
+        }
+
+        .panel-head {
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            gap: 18px;
+        }
+
+        .panel-title {
+            min-width: 0;
+        }
+
+        .panel-title h2 {
+            margin: 0;
+            font-size: 21px;
+            line-height: 1.35;
+        }
+
+        .panel-title p {
+            margin: 6px 0 0;
+            color: var(--muted);
+            font-size: 14px;
+            line-height: 1.65;
+        }
+
+        .panel-meta {
+            flex: 0 0 auto;
+            margin-top: 3px;
+            color: var(--muted);
+            font-size: 14px;
+            white-space: nowrap;
+        }
+
+        .stat-strip {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 9px;
+            min-height: 36px;
+        }
+
+        .stat {
+            display: inline-flex;
+            align-items: center;
+            min-height: 36px;
+            padding: 0 13px;
+            border: 1px solid var(--line);
+            border-radius: 999px;
+            color: var(--muted);
+            background: var(--surface-soft);
+            font-size: 13px;
+            white-space: nowrap;
+        }
+
+        .editor {
+            width: 100%;
+            min-width: 0;
+            min-height: 380px;
+            padding: 18px 19px;
+            resize: vertical;
+            border: 1px solid var(--line-strong);
+            border-radius: var(--radius-control);
+            outline: none;
+            color: var(--text);
+            background: var(--surface-soft);
+            font-size: 15px;
+            line-height: 1.72;
+            tab-size: 4;
+            transition: border-color 160ms ease, box-shadow 160ms ease, background-color 160ms ease;
+        }
+
+        .editor-output {
+            background: var(--surface-blue);
+            font-family: "Cascadia Mono", "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+            font-size: 14px;
+        }
+
+        .editor::placeholder {
+            color: var(--placeholder);
+        }
+
+        .editor:focus {
+            border-color: var(--accent);
+            background: #ffffff;
+            box-shadow: 0 0 0 4px var(--focus);
+        }
+
+        .button:focus-visible {
+            outline: none;
+            box-shadow: 0 0 0 4px var(--focus);
+        }
+
+        .toast-stack {
+            position: fixed;
+            right: 22px;
+            bottom: 22px;
+            z-index: 1000;
+            display: grid;
+            width: min(340px, calc(100vw - 32px));
+            gap: 10px;
+            pointer-events: none;
+        }
+
+        .toast {
+            padding: 13px 15px;
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            border-radius: 12px;
+            color: #ffffff;
+            background: rgba(21, 23, 26, 0.94);
+            box-shadow: 0 18px 40px rgba(31, 42, 55, 0.22);
+            font-size: 14px;
+            line-height: 1.5;
+            animation: toast-in 180ms ease-out;
+        }
+
+        .toast.is-leaving {
+            animation: toast-out 180ms ease-in forwards;
+        }
+
+        .sr-only {
+            position: absolute;
+            width: 1px;
+            height: 1px;
+            padding: 0;
+            margin: -1px;
+            overflow: hidden;
+            clip: rect(0, 0, 0, 0);
+            white-space: nowrap;
+            border: 0;
+        }
+
+        @keyframes toast-in {
+            from {
+                opacity: 0;
+                transform: translateY(8px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @keyframes toast-out {
+            from {
+                opacity: 1;
+                transform: translateY(0);
+            }
+            to {
+                opacity: 0;
+                transform: translateY(8px);
+            }
+        }
+
+        @media (max-width: 1050px) {
+            .workspace {
+                grid-template-columns: 1fr;
+            }
+
+            .panel {
+                grid-template-rows: auto auto minmax(320px, 1fr);
+                min-height: 500px;
+            }
+
+            .editor {
+                min-height: 320px;
+            }
+        }
+
+        @media (max-width: 760px) {
+            .page {
+                padding: 12px;
+            }
+
+            .app {
+                gap: 12px;
+                min-height: calc(100vh - 24px);
+            }
+
+            .hero,
+            .toolbar {
+                border-radius: 20px;
+            }
+
+            .hero {
+                padding: 24px 22px 26px;
+            }
+
+            .hero h1 {
+                font-size: 34px;
+            }
+
+            .hero p {
+                font-size: 15px;
+                line-height: 1.7;
+            }
+
+            .toolbar {
+                display: grid;
+                padding: 12px;
+            }
+
+            .toolbar-group {
+                display: grid;
+                grid-template-columns: 1fr 1fr;
+                width: 100%;
+            }
+
+            .toolbar-group-state {
+                grid-template-columns: minmax(0, 1fr) auto;
+            }
+
+            .button {
+                width: 100%;
+                min-width: 0;
+                padding: 0 14px;
+            }
+
+            .button-primary {
+                min-width: 138px;
+            }
+
+            .panel {
+                min-height: 460px;
+                padding: 16px;
+                border-radius: 18px;
+            }
+
+            .panel-head {
+                display: grid;
+                gap: 7px;
+            }
+
+            .panel-meta {
+                margin: 0;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .toolbar-group,
+            .toolbar-group-state {
+                grid-template-columns: 1fr;
+            }
+
+            .toolbar-state {
+                min-height: 24px;
+                white-space: normal;
+            }
+
+            .button-primary {
+                min-width: 0;
+            }
+
+            .stat-strip {
+                display: grid;
+                grid-template-columns: 1fr;
+            }
+
+            .stat {
+                justify-content: center;
+            }
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+            *,
+            *::before,
+            *::after {
+                scroll-behavior: auto !important;
+                animation-duration: 0.01ms !important;
+                animation-iteration-count: 1 !important;
+                transition-duration: 0.01ms !important;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="page">
+        <main class="app">
+            <header class="hero">
+                <div class="hero-inner">
+                    <div class="kicker"><span class="kicker-dot" aria-hidden="true"></span>TABLE → MARKDOWN</div>
+                    <h1>表格转 Markdown</h1>
+                    <p>粘贴来自 Excel、WPS 或飞书的表格，首行会作为表头，单元格换行会保留为 Markdown 可用的换行格式。</p>
+                </div>
+            </header>
+
+            <section class="toolbar" aria-label="转换操作">
+                <div class="toolbar-group">
+                    <button class="button" id="sampleButton" type="button">
+                        <svg class="button-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="m15 4 5 5L8.5 20.5a2.1 2.1 0 0 1-3 0l-2-2a2.1 2.1 0 0 1 0-3L15 4Z"></path><path d="m13 6 5 5"></path><path d="M6 3v4"></path><path d="M4 5h4"></path></svg>
+                        <span>填入示例</span>
+                    </button>
+                    <button class="button" id="clearButton" type="button" disabled>
+                        <svg class="button-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 6h18"></path><path d="M8 6V4h8v2"></path><path d="m19 6-1 14H6L5 6"></path><path d="M10 11v5"></path><path d="M14 11v5"></path></svg>
+                        <span>清空内容</span>
+                    </button>
+                </div>
+                <div class="toolbar-group toolbar-group-state">
+                    <p class="toolbar-state" id="conversionState">等待粘贴表格</p>
+                    <button class="button button-primary" id="copyButton" type="button" disabled>
+                        <svg class="button-icon" viewBox="0 0 24 24" aria-hidden="true"><rect width="14" height="14" x="8" y="8" rx="2"></rect><path d="M16 8V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h2"></path></svg>
+                        <span>复制结果</span>
+                    </button>
+                </div>
+            </section>
+
+            <section class="workspace" aria-label="表格转换工作区">
+                <article class="panel" aria-labelledby="inputTitle">
+                    <div class="panel-head">
+                        <div class="panel-title">
+                            <h2 id="inputTitle">原始表格</h2>
+                            <p>直接粘贴表格内容</p>
+                        </div>
+                        <div class="panel-meta" id="inputMeta">0 行 · 0 字</div>
+                    </div>
+                    <div class="stat-strip" aria-label="原始表格统计">
+                        <span class="stat" id="sourceRows">表格 0 行</span>
+                        <span class="stat" id="sourceColumns">列 0</span>
+                        <span class="stat" id="sourceBreaks">单元格换行 0</span>
+                    </div>
+                    <label class="sr-only" for="sourceInput">原始表格内容</label>
+                    <textarea class="editor" id="sourceInput" placeholder="把表格粘贴到这里" spellcheck="false" autocapitalize="off" autocomplete="off"></textarea>
+                </article>
+
+                <article class="panel" aria-labelledby="outputTitle">
+                    <div class="panel-head">
+                        <div class="panel-title">
+                            <h2 id="outputTitle">Markdown 结果</h2>
+                            <p>首行作为表头，结果可直接复制</p>
+                        </div>
+                        <div class="panel-meta" id="outputMeta">0 行 · 0 字</div>
+                    </div>
+                    <div class="stat-strip" aria-label="Markdown 结果统计">
+                        <span class="stat" id="resultHeader">表头 0 行</span>
+                        <span class="stat" id="resultRows">数据 0 行</span>
+                        <span class="stat" id="resultPipes">转义竖杠 0</span>
+                    </div>
+                    <label class="sr-only" for="resultOutput">Markdown 转换结果</label>
+                    <textarea class="editor editor-output" id="resultOutput" placeholder="转换结果会显示在这里" readonly spellcheck="false"></textarea>
+                </article>
+            </section>
+        </main>
+    </div>
+
+    <div class="toast-stack" id="toastStack" aria-live="polite" aria-atomic="true"></div>
+    <div class="sr-only" id="liveStatus" aria-live="polite" aria-atomic="true"></div>
+
+    <script>
+        (function () {
+            "use strict";
+
+            var sourceInput = document.getElementById("sourceInput");
+            var resultOutput = document.getElementById("resultOutput");
+            var sampleButton = document.getElementById("sampleButton");
+            var clearButton = document.getElementById("clearButton");
+            var copyButton = document.getElementById("copyButton");
+            var conversionState = document.getElementById("conversionState");
+            var inputMeta = document.getElementById("inputMeta");
+            var outputMeta = document.getElementById("outputMeta");
+            var sourceRows = document.getElementById("sourceRows");
+            var sourceColumns = document.getElementById("sourceColumns");
+            var sourceBreaks = document.getElementById("sourceBreaks");
+            var resultHeader = document.getElementById("resultHeader");
+            var resultRows = document.getElementById("resultRows");
+            var resultPipes = document.getElementById("resultPipes");
+            var toastStack = document.getElementById("toastStack");
+            var liveStatus = document.getElementById("liveStatus");
+            var pastedTableCache = null;
+
+            var sampleRows = [
+                ["A1单元格-1级别", "B1单元格-2级别", "C1单元格-3级别", "D1单元格-4级别", "E1单元格-5级别"],
+                ["A2单元格-1级别", "B2单元格-2级别", "C2单元格-3级别", "D2单元格内第1行-4级别\nD2单元格内换行后第2行-4级别\nD2单元格内换行后第3行-4级别", "E2单元格第一行-5级别\nE2单元格内换行后第2行-5级别\nE2单元格内换行第3行-5级别"],
+                ["A3单元格-1级别", "", "", "", ""]
+            ];
+
+            function normalizeNewlines(value) {
+                return String(value == null ? "" : value).replace(/\r\n/g, "\n").replace(/\r/g, "\n");
+            }
+
+            function normalizeCell(value) {
+                var lines = normalizeNewlines(value).replace(/\u00a0/g, " ").split("\n");
+
+                while (lines.length && lines[0].trim() === "") {
+                    lines.shift();
+                }
+                while (lines.length && lines[lines.length - 1].trim() === "") {
+                    lines.pop();
+                }
+
+                return lines.map(function (line) {
+                    return line.trim();
+                }).join("\n");
+            }
+
+            function rowIsEmpty(row) {
+                return row.every(function (cell) {
+                    return normalizeCell(cell) === "";
+                });
+            }
+
+            function normalizeRows(rows) {
+                var cleaned = (rows || []).map(function (row) {
+                    return Array.from(row || [], normalizeCell);
+                });
+
+                while (cleaned.length && rowIsEmpty(cleaned[0])) {
+                    cleaned.shift();
+                }
+                while (cleaned.length && rowIsEmpty(cleaned[cleaned.length - 1])) {
+                    cleaned.pop();
+                }
+                if (!cleaned.length) {
+                    return [];
+                }
+
+                var columnCount = cleaned.reduce(function (maximum, row) {
+                    return Math.max(maximum, row.length);
+                }, 0);
+
+                return cleaned.map(function (row) {
+                    var padded = row.slice(0, columnCount);
+                    while (padded.length < columnCount) {
+                        padded.push("");
+                    }
+                    return padded;
+                });
+            }
+
+            function escapeMarkdownCell(value) {
+                return normalizeCell(value)
+                    .replace(/&/g, "&amp;")
+                    .replace(/</g, "&lt;")
+                    .replace(/>/g, "&gt;")
+                    .replace(/\\/g, "\\\\")
+                    .replace(/\|/g, "\\|")
+                    .replace(/\n/g, "<br>");
+            }
+
+            function formatMarkdownRow(row) {
+                return "| " + row.map(escapeMarkdownCell).join(" | ") + " |";
+            }
+
+            function emptyResult() {
+                return {
+                    text: "",
+                    rows: 0,
+                    columns: 0,
+                    dataRows: 0,
+                    outputLines: 0,
+                    cellBreaks: 0,
+                    escapedPipes: 0
+                };
+            }
+
+            function convertRowsToMarkdown(rows) {
+                var normalized = normalizeRows(rows);
+                if (!normalized.length || !normalized[0].length) {
+                    return emptyResult();
+                }
+
+                var columnCount = normalized[0].length;
+                var separator = "| " + Array(columnCount).fill("---").join(" | ") + " |";
+                var markdownLines = [formatMarkdownRow(normalized[0]), separator];
+
+                normalized.slice(1).forEach(function (row) {
+                    markdownLines.push(formatMarkdownRow(row));
+                });
+
+                var cellBreaks = 0;
+                var escapedPipes = 0;
+                normalized.forEach(function (row) {
+                    row.forEach(function (cell) {
+                        cellBreaks += (cell.match(/\n/g) || []).length;
+                        escapedPipes += (cell.match(/\|/g) || []).length;
+                    });
+                });
+
+                return {
+                    text: markdownLines.join("\n"),
+                    rows: normalized.length,
+                    columns: columnCount,
+                    dataRows: Math.max(0, normalized.length - 1),
+                    outputLines: markdownLines.length,
+                    cellBreaks: cellBreaks,
+                    escapedPipes: escapedPipes
+                };
+            }
+
+            function parseStructuredTsv(value) {
+                var source = normalizeNewlines(value).replace(/^\uFEFF/, "");
+                var rows = [];
+                var row = [];
+                var cell = "";
+                var inQuotes = false;
+                var fieldStarted = false;
+                var sawStructuralQuote = false;
+
+                for (var index = 0; index < source.length; index += 1) {
+                    var character = source[index];
+                    var nextCharacter = source[index + 1];
+
+                    if (inQuotes) {
+                        if (character === "\"" && nextCharacter === "\"") {
+                            cell += "\"";
+                            index += 1;
+                        } else if (character === "\"") {
+                            inQuotes = false;
+                        } else {
+                            cell += character;
+                        }
+                        continue;
+                    }
+
+                    if (character === "\"" && !fieldStarted) {
+                        inQuotes = true;
+                        fieldStarted = true;
+                        sawStructuralQuote = true;
+                    } else if (character === "\t") {
+                        row.push(cell);
+                        cell = "";
+                        fieldStarted = false;
+                    } else if (character === "\n") {
+                        row.push(cell);
+                        rows.push(row);
+                        row = [];
+                        cell = "";
+                        fieldStarted = false;
+                    } else {
+                        cell += character;
+                        fieldStarted = true;
+                    }
+                }
+
+                if (inQuotes) {
+                    return { valid: false, sawStructuralQuote: sawStructuralQuote, rows: [] };
+                }
+
+                if (cell !== "" || row.length || (source.length && !source.endsWith("\n"))) {
+                    row.push(cell);
+                    rows.push(row);
+                }
+
+                return { valid: true, sawStructuralQuote: sawStructuralQuote, rows: rows };
+            }
+
+            function parseLooseTsv(value) {
+                var source = normalizeNewlines(value).replace(/^\uFEFF/, "");
+                if (!source.trim()) {
+                    return [];
+                }
+                if (source.endsWith("\n")) {
+                    source = source.slice(0, -1);
+                }
+
+                var physicalRows = source.split("\n").map(function (line) {
+                    return line.split("\t");
+                });
+                var expectedColumns = physicalRows[0].length;
+
+                if (expectedColumns === 1) {
+                    return physicalRows;
+                }
+
+                var rows = [];
+                var currentRow = null;
+                var recoveringMultilineCell = false;
+
+                function shouldRecoverMultiline(startIndex) {
+                    var startingRow = physicalRows[startIndex];
+                    if (startingRow.length <= 1 || startingRow.length >= expectedColumns) {
+                        return false;
+                    }
+
+                    var projectedColumns = startingRow.length;
+                    var sawSingleFieldContinuation = false;
+                    for (var lookAhead = startIndex + 1; lookAhead < physicalRows.length; lookAhead += 1) {
+                        var followingRow = physicalRows[lookAhead];
+                        if (followingRow.length === 1) {
+                            sawSingleFieldContinuation = true;
+                            continue;
+                        }
+
+                        projectedColumns += followingRow.length - 1;
+                        return sawSingleFieldContinuation && projectedColumns >= expectedColumns;
+                    }
+                    return false;
+                }
+
+                physicalRows.forEach(function (parts, rowIndex) {
+                    if (!currentRow) {
+                        currentRow = parts.slice();
+                        recoveringMultilineCell = false;
+                        return;
+                    }
+
+                    if (recoveringMultilineCell && currentRow.length < expectedColumns) {
+                        currentRow[currentRow.length - 1] += "\n" + parts[0];
+                        for (var index = 1; index < parts.length; index += 1) {
+                            currentRow.push(parts[index]);
+                        }
+                        recoveringMultilineCell = true;
+                        return;
+                    }
+
+                    if (recoveringMultilineCell && parts.length === 1) {
+                        currentRow[currentRow.length - 1] += "\n" + parts[0];
+                        return;
+                    }
+
+                    rows.push(currentRow);
+                    currentRow = parts.slice();
+                    recoveringMultilineCell = shouldRecoverMultiline(rowIndex);
+                });
+
+                if (currentRow) {
+                    rows.push(currentRow);
+                }
+                return rows;
+            }
+
+            function parsePlainTable(value) {
+                var source = normalizeNewlines(value);
+                if (!source.trim()) {
+                    return [];
+                }
+
+                var structured = parseStructuredTsv(source);
+                if (structured.valid && structured.sawStructuralQuote) {
+                    return structured.rows;
+                }
+                return parseLooseTsv(source);
+            }
+
+            function extractCellText(cell) {
+                var clone = cell.cloneNode(true);
+                var ownerDocument = clone.ownerDocument;
+
+                Array.from(clone.querySelectorAll("br")).forEach(function (breakElement) {
+                    breakElement.replaceWith(ownerDocument.createTextNode("\n"));
+                });
+                Array.from(clone.querySelectorAll("p, div, li")).forEach(function (blockElement) {
+                    blockElement.appendChild(ownerDocument.createTextNode("\n"));
+                });
+
+                return normalizeCell(clone.textContent || "");
+            }
+
+            function parseHtmlTable(html) {
+                if (!html || typeof DOMParser === "undefined") {
+                    return null;
+                }
+
+                var parsedDocument = new DOMParser().parseFromString(html, "text/html");
+                var tables = Array.from(parsedDocument.querySelectorAll("table"));
+                if (!tables.length) {
+                    return null;
+                }
+
+                tables.sort(function (first, second) {
+                    return second.querySelectorAll("td, th").length - first.querySelectorAll("td, th").length;
+                });
+
+                var table = tables[0];
+                var grid = [];
+                Array.from(table.rows).forEach(function (tableRow, rowIndex) {
+                    if (!grid[rowIndex]) {
+                        grid[rowIndex] = [];
+                    }
+                    var columnIndex = 0;
+
+                    Array.from(tableRow.cells).forEach(function (cell) {
+                        while (typeof grid[rowIndex][columnIndex] !== "undefined") {
+                            columnIndex += 1;
+                        }
+
+                        var rowSpan = Math.max(1, Number.parseInt(cell.getAttribute("rowspan") || "1", 10));
+                        var columnSpan = Math.max(1, Number.parseInt(cell.getAttribute("colspan") || "1", 10));
+                        var cellValue = extractCellText(cell);
+
+                        for (var rowOffset = 0; rowOffset < rowSpan; rowOffset += 1) {
+                            var targetRow = rowIndex + rowOffset;
+                            if (!grid[targetRow]) {
+                                grid[targetRow] = [];
+                            }
+                            for (var columnOffset = 0; columnOffset < columnSpan; columnOffset += 1) {
+                                grid[targetRow][columnIndex + columnOffset] = rowOffset === 0 && columnOffset === 0 ? cellValue : "";
+                            }
+                        }
+                        columnIndex += columnSpan;
+                    });
+                });
+
+                var width = grid.reduce(function (maximum, row) {
+                    return Math.max(maximum, row.length);
+                }, 0);
+                if (!width) {
+                    return null;
+                }
+
+                return grid.map(function (row) {
+                    var cells = [];
+                    for (var index = 0; index < width; index += 1) {
+                        cells.push(typeof row[index] === "undefined" ? "" : row[index]);
+                    }
+                    return cells;
+                });
+            }
+
+            function serializeTsv(rows) {
+                return rows.map(function (row) {
+                    return row.map(function (cell) {
+                        var value = normalizeNewlines(cell);
+                        if (/[\t\n\"]/.test(value)) {
+                            return "\"" + value.replace(/\"/g, "\"\"") + "\"";
+                        }
+                        return value;
+                    }).join("\t");
+                }).join("\n");
+            }
+
+            function showToast(message) {
+                var toast = document.createElement("div");
+                toast.className = "toast";
+                toast.setAttribute("role", "status");
+                toast.textContent = message;
+                toastStack.appendChild(toast);
+
+                window.setTimeout(function () {
+                    toast.classList.add("is-leaving");
+                    window.setTimeout(function () {
+                        toast.remove();
+                    }, 180);
+                }, 1900);
+            }
+
+            function getCurrentRows() {
+                if (pastedTableCache && pastedTableCache.source === sourceInput.value) {
+                    return pastedTableCache.rows;
+                }
+                pastedTableCache = null;
+                return parsePlainTable(sourceInput.value);
+            }
+
+            function updateInterface(result) {
+                var source = sourceInput.value;
+                var sourceLength = Array.from(source).length;
+                var physicalLines = source ? normalizeNewlines(source).split("\n").length : 0;
+                var outputLength = Array.from(result.text).length;
+
+                inputMeta.textContent = physicalLines + " 行 · " + sourceLength + " 字";
+                outputMeta.textContent = result.outputLines + " 行 · " + outputLength + " 字";
+                sourceRows.textContent = "表格 " + result.rows + " 行";
+                sourceColumns.textContent = "列 " + result.columns;
+                sourceBreaks.textContent = "单元格换行 " + result.cellBreaks;
+                resultHeader.textContent = "表头 " + (result.rows ? 1 : 0) + " 行";
+                resultRows.textContent = "数据 " + result.dataRows + " 行";
+                resultPipes.textContent = "转义竖杠 " + result.escapedPipes;
+                clearButton.disabled = sourceLength === 0;
+                copyButton.disabled = result.text === "";
+
+                if (result.text) {
+                    conversionState.textContent = "已生成 " + result.outputLines + " 行 Markdown";
+                    conversionState.classList.add("is-ready");
+                } else {
+                    conversionState.textContent = "等待粘贴表格";
+                    conversionState.classList.remove("is-ready");
+                }
+            }
+
+            function performConversion() {
+                var result = convertRowsToMarkdown(getCurrentRows());
+                resultOutput.value = result.text;
+                updateInterface(result);
+                return result;
+            }
+
+            function setSource(value, rows) {
+                sourceInput.value = value;
+                pastedTableCache = rows ? { source: value, rows: rows } : null;
+                return performConversion();
+            }
+
+            async function copyText(value) {
+                if (navigator.clipboard && window.isSecureContext) {
+                    try {
+                        await navigator.clipboard.writeText(value);
+                        return;
+                    } catch (error) {
+                        // Continue with the selection-based fallback for local files.
+                    }
+                }
+
+                resultOutput.focus();
+                resultOutput.select();
+                var copied = document.execCommand("copy");
+                resultOutput.setSelectionRange(0, 0);
+                if (!copied) {
+                    throw new Error("copy_failed");
+                }
+            }
+
+            sourceInput.addEventListener("paste", function (event) {
+                var clipboard = event.clipboardData;
+                if (!clipboard) {
+                    return;
+                }
+
+                var htmlRows = parseHtmlTable(clipboard.getData("text/html"));
+                if (!htmlRows) {
+                    return;
+                }
+
+                var wholeInputSelected = sourceInput.selectionStart === 0 && sourceInput.selectionEnd === sourceInput.value.length;
+                if (sourceInput.value && !wholeInputSelected) {
+                    return;
+                }
+
+                event.preventDefault();
+                var plainText = clipboard.getData("text/plain");
+                var displayValue = plainText ? normalizeNewlines(plainText) : serializeTsv(htmlRows);
+                var result = setSource(displayValue, htmlRows);
+                showToast("已识别 " + result.rows + " 行、" + result.columns + " 列表格");
+                liveStatus.textContent = "已粘贴并转换表格";
+            });
+
+            sourceInput.addEventListener("input", function () {
+                pastedTableCache = null;
+                performConversion();
+            });
+
+            sampleButton.addEventListener("click", function () {
+                var result = setSource(serializeTsv(sampleRows), sampleRows);
+                showToast("已填入包含单元格换行的示例");
+                liveStatus.textContent = "已生成 " + result.outputLines + " 行 Markdown 示例";
+                sourceInput.focus();
+            });
+
+            clearButton.addEventListener("click", function () {
+                setSource("", null);
+                showToast("已清空内容");
+                liveStatus.textContent = "内容已清空";
+                sourceInput.focus();
+            });
+
+            copyButton.addEventListener("click", async function () {
+                if (!resultOutput.value) {
+                    return;
+                }
+
+                try {
+                    await copyText(resultOutput.value);
+                    showToast("Markdown 结果已复制");
+                    liveStatus.textContent = "Markdown 结果已复制到剪贴板";
+                } catch (error) {
+                    showToast("复制失败，请在结果框中手动复制");
+                    liveStatus.textContent = "自动复制失败";
+                }
+            });
+
+            window.TableToMarkdown = Object.freeze({
+                parsePlainTable: parsePlainTable,
+                parseHtmlTable: parseHtmlTable,
+                convertRowsToMarkdown: convertRowsToMarkdown,
+                serializeTsv: serializeTsv
+            });
+
+            updateInterface(emptyResult());
+        }());
+    </script>
+</body>
+</html>
