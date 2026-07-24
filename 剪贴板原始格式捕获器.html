@@ -1,0 +1,1331 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex, nofollow">
+  <meta name="color-scheme" content="light">
+  <title>剪贴板原始格式捕获器</title>
+  <style>
+    :root {
+      color: #17191d;
+      background: #eef0f3;
+      font-family: "Microsoft YaHei UI", "Microsoft YaHei", system-ui, sans-serif;
+      font-synthesis: none;
+      --blue: #2478d1;
+      --blue-hover: #1768bd;
+      --blue-soft: #eaf3fd;
+      --green: #167455;
+      --green-soft: #eaf7f1;
+      --amber: #8a5b12;
+      --amber-soft: #fff8e8;
+      --red: #b43737;
+      --border: #dfe3e8;
+      --border-strong: #cbd2da;
+      --muted: #6f7782;
+      --panel: #ffffff;
+      --field: #fafbfc;
+      --shadow: 0 16px 38px rgba(25, 32, 42, 0.08);
+    }
+
+    * {
+      box-sizing: border-box;
+      letter-spacing: 0;
+    }
+
+    html { min-width: 320px; }
+
+    body {
+      min-height: 100vh;
+      margin: 0;
+      background: #eef0f3;
+    }
+
+    button,
+    textarea {
+      font: inherit;
+    }
+
+    button {
+      min-height: 40px;
+      padding: 9px 16px;
+      border-radius: 6px;
+      cursor: pointer;
+    }
+
+    button:focus-visible,
+    textarea:focus-visible,
+    #dropzone:focus-visible,
+    summary:focus-visible {
+      outline: 3px solid rgba(36, 120, 209, 0.24);
+      outline-offset: 2px;
+    }
+
+    button:disabled {
+      cursor: not-allowed;
+      opacity: 0.5;
+    }
+
+    [hidden] { display: none !important; }
+
+    .app-shell {
+      width: min(1220px, calc(100% - 40px));
+      margin: 24px auto 36px;
+    }
+
+    .intro {
+      padding: 30px 36px;
+      border: 1px solid rgba(255, 255, 255, 0.92);
+      border-top: 4px solid var(--blue);
+      border-radius: 8px;
+      background: var(--panel);
+      box-shadow: var(--shadow);
+    }
+
+    .eyebrow {
+      display: inline-flex;
+      gap: 9px;
+      align-items: center;
+      color: var(--blue);
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: 0;
+    }
+
+    .eyebrow-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--blue);
+      box-shadow: 0 0 0 5px var(--blue-soft);
+    }
+
+    h1 {
+      margin: 15px 0 10px;
+      font-size: 42px;
+      line-height: 1.2;
+      letter-spacing: 0;
+    }
+
+    .intro p {
+      max-width: 820px;
+      margin: 0;
+      color: var(--muted);
+      font-size: 16px;
+      line-height: 1.8;
+    }
+
+    .privacy-badge {
+      display: inline-flex;
+      gap: 7px;
+      align-items: center;
+      margin-top: 18px;
+      padding: 7px 10px;
+      border: 1px solid #c9eadb;
+      border-radius: 5px;
+      background: var(--green-soft);
+      color: var(--green);
+      font-size: 13px;
+      font-weight: 600;
+    }
+
+    .capture-card,
+    .result-card,
+    .raw-card,
+    .limit-card {
+      margin-top: 18px;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      background: var(--panel);
+      box-shadow: 0 8px 24px rgba(25, 32, 42, 0.045);
+    }
+
+    .capture-card { padding: 18px; }
+
+    #dropzone {
+      display: grid;
+      place-items: center;
+      min-height: 260px;
+      padding: 30px;
+      border: 2px dashed #aebdcd;
+      border-radius: 7px;
+      outline: none;
+      background: #f8fbfe;
+      text-align: center;
+      cursor: text;
+      caret-color: transparent;
+    }
+
+    #dropzone:hover,
+    #dropzone:focus {
+      border-color: var(--blue);
+      background: #f7fbff;
+      box-shadow: inset 0 0 0 1px rgba(36, 120, 209, 0.08);
+    }
+
+    #dropzone[data-state="capturing"] {
+      border-color: var(--blue);
+      background: var(--blue-soft);
+    }
+
+    #dropzone[data-state="captured"] {
+      border-color: #7ebda4;
+      background: #f5fbf8;
+    }
+
+    .drop-content {
+      max-width: 650px;
+      pointer-events: none;
+    }
+
+    .clipboard-icon {
+      display: grid;
+      place-items: center;
+      width: 54px;
+      height: 54px;
+      margin: 0 auto 16px;
+      border-radius: 12px;
+      background: var(--blue-soft);
+      color: var(--blue);
+      font-size: 28px;
+    }
+
+    .drop-title {
+      display: block;
+      margin-bottom: 8px;
+      font-size: 20px;
+      font-weight: 700;
+    }
+
+    .drop-description {
+      display: block;
+      color: var(--muted);
+      font-size: 14px;
+      line-height: 1.75;
+    }
+
+    kbd {
+      display: inline-block;
+      min-width: 28px;
+      padding: 2px 7px;
+      border: 1px solid #c9d0d8;
+      border-bottom-width: 2px;
+      border-radius: 4px;
+      background: #fff;
+      color: #303842;
+      font: 600 12px/1.5 "Microsoft YaHei UI", "Microsoft YaHei", sans-serif;
+    }
+
+    .action-bar {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      align-items: center;
+      padding-top: 14px;
+    }
+
+    .button-primary {
+      border: 1px solid var(--blue);
+      background: var(--blue);
+      color: #fff;
+      font-weight: 700;
+    }
+
+    .button-primary:hover:not(:disabled) {
+      border-color: var(--blue-hover);
+      background: var(--blue-hover);
+    }
+
+    .button-secondary {
+      border: 1px solid var(--border-strong);
+      background: #fff;
+      color: #313943;
+    }
+
+    .button-secondary:hover:not(:disabled) { background: #f3f5f7; }
+
+    .action-spacer { flex: 1 1 auto; }
+
+    #status {
+      min-height: 22px;
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.6;
+    }
+
+    #status[data-tone="success"] { color: var(--green); }
+    #status[data-tone="warning"] { color: var(--amber); }
+    #status[data-tone="error"] { color: var(--red); }
+
+    .panel-head {
+      display: flex;
+      gap: 20px;
+      align-items: flex-start;
+      justify-content: space-between;
+      padding: 20px 22px 16px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .panel-title {
+      margin: 0;
+      font-size: 17px;
+      line-height: 1.4;
+    }
+
+    .panel-description {
+      margin: 5px 0 0;
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.6;
+    }
+
+    .panel-count {
+      flex: 0 0 auto;
+      padding: 5px 9px;
+      border-radius: 4px;
+      background: var(--blue-soft);
+      color: #175f9f;
+      font-size: 12px;
+      font-weight: 700;
+    }
+
+    .summary-grid {
+      display: grid;
+      grid-template-columns: repeat(5, minmax(0, 1fr));
+      gap: 1px;
+      background: var(--border);
+    }
+
+    .summary-item {
+      min-width: 0;
+      padding: 16px 18px;
+      background: #fff;
+    }
+
+    .summary-label {
+      display: block;
+      margin-bottom: 5px;
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    .summary-value {
+      display: block;
+      overflow: hidden;
+      color: #242a31;
+      font-size: 15px;
+      font-weight: 700;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .type-chips {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      padding: 14px 20px;
+      border-top: 1px solid var(--border);
+      background: #fafbfc;
+    }
+
+    .type-chip {
+      max-width: 100%;
+      overflow: hidden;
+      padding: 5px 9px;
+      border: 1px solid #d7e4f1;
+      border-radius: 999px;
+      background: #f1f7fd;
+      color: #285d8c;
+      font: 12px/1.4 Consolas, "Courier New", monospace;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .report-wrap { padding: 18px; }
+
+    #report-output,
+    .raw-output {
+      display: block;
+      width: 100%;
+      resize: vertical;
+      border: 1px solid var(--border-strong);
+      border-radius: 6px;
+      outline: none;
+      background: var(--field);
+      color: #27313a;
+      font: 12px/1.58 Consolas, "Courier New", monospace;
+      tab-size: 4;
+      white-space: pre;
+    }
+
+    #report-output {
+      min-height: 430px;
+      padding: 16px;
+    }
+
+    .raw-groups { padding: 8px 18px 18px; }
+
+    .raw-group-title {
+      margin: 18px 2px 10px;
+      color: #333b44;
+      font-size: 14px;
+    }
+
+    .raw-empty {
+      padding: 18px;
+      border: 1px dashed var(--border-strong);
+      border-radius: 6px;
+      color: var(--muted);
+      font-size: 13px;
+      text-align: center;
+    }
+
+    details {
+      margin-top: 9px;
+      overflow: hidden;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      background: #fff;
+    }
+
+    details[open] { border-color: #c9d9e8; }
+
+    summary {
+      display: flex;
+      gap: 12px;
+      align-items: center;
+      min-height: 48px;
+      padding: 10px 13px;
+      list-style: none;
+      cursor: pointer;
+      user-select: none;
+    }
+
+    summary::-webkit-details-marker { display: none; }
+
+    summary::before {
+      content: "›";
+      flex: 0 0 auto;
+      color: var(--blue);
+      font-size: 22px;
+      line-height: 1;
+      transform: rotate(0deg);
+      transition: transform 0.15s ease;
+    }
+
+    details[open] summary::before { transform: rotate(90deg); }
+
+    .detail-name {
+      min-width: 0;
+      overflow: hidden;
+      font: 600 13px/1.45 Consolas, "Courier New", monospace;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .detail-meta {
+      margin-left: auto;
+      color: var(--muted);
+      font-size: 12px;
+      white-space: nowrap;
+    }
+
+    .detail-body {
+      padding: 14px;
+      border-top: 1px solid var(--border);
+      background: #fafbfc;
+    }
+
+    .detail-actions {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 10px;
+    }
+
+    .detail-note {
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.5;
+    }
+
+    .small-button {
+      min-height: 32px;
+      padding: 6px 10px;
+      border: 1px solid var(--border-strong);
+      border-radius: 5px;
+      background: #fff;
+      color: #313943;
+      font-size: 12px;
+    }
+
+    .small-button:hover { background: #eef2f5; }
+
+    .raw-output {
+      min-height: 210px;
+      padding: 12px;
+    }
+
+    .limit-card {
+      display: flex;
+      gap: 14px;
+      padding: 20px 22px;
+      border-color: #ead7a8;
+      background: var(--amber-soft);
+      box-shadow: none;
+    }
+
+    .limit-icon {
+      flex: 0 0 auto;
+      color: var(--amber);
+      font-size: 22px;
+      line-height: 1.2;
+    }
+
+    .limit-card h2 {
+      margin: 0 0 6px;
+      color: #5e4316;
+      font-size: 15px;
+    }
+
+    .limit-card p {
+      margin: 0;
+      color: #745526;
+      font-size: 13px;
+      line-height: 1.75;
+    }
+
+    @media (max-width: 900px) {
+      .app-shell { width: min(100% - 24px, 1220px); margin-top: 12px; }
+      .intro { padding: 24px; }
+      .summary-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .summary-item:last-child { grid-column: 1 / -1; }
+    }
+
+    @media (max-width: 620px) {
+      .app-shell { width: min(100% - 16px, 1220px); }
+      .intro { padding: 20px 18px; }
+      h1 { font-size: 30px; }
+      .intro p { font-size: 14px; }
+      .capture-card { padding: 10px; }
+      #dropzone { min-height: 230px; padding: 24px 16px; }
+      .action-bar { align-items: stretch; flex-direction: column; }
+      .action-spacer { display: none; }
+      .action-bar button { width: 100%; }
+      #status { order: -1; }
+      .panel-head { padding: 18px 16px 14px; }
+      .panel-count { display: none; }
+      .summary-grid { grid-template-columns: 1fr; }
+      .summary-item:last-child { grid-column: auto; }
+      .report-wrap { padding: 12px; }
+      #report-output { min-height: 350px; padding: 12px; }
+      .raw-groups { padding: 6px 12px 14px; }
+      summary { align-items: flex-start; }
+      .detail-meta { display: none; }
+      .detail-actions { align-items: stretch; flex-direction: column; }
+      .detail-actions button { width: 100%; }
+      .limit-card { padding: 18px 16px; }
+    }
+  </style>
+</head>
+<body>
+  <main class="app-shell">
+    <header class="intro">
+      <div class="eyebrow"><span class="eyebrow-dot" aria-hidden="true"></span>RAW CLIPBOARD CAPTURE</div>
+      <h1>剪贴板原始格式捕获器</h1>
+      <p>把内容粘贴到捕获区，页面会保存浏览器在本次粘贴事件中提供的全部类型、数据项、文件和原始内容。页面不判断内容含义，也不会执行捕获到的 HTML。</p>
+      <div class="privacy-badge"><span aria-hidden="true">●</span>仅在当前页面内处理，不上传、不联网、不长期保存</div>
+    </header>
+
+    <section class="capture-card" aria-labelledby="capture-title">
+      <div id="dropzone" contenteditable="true" role="textbox" aria-label="剪贴板粘贴捕获区" aria-describedby="capture-help" spellcheck="false" data-state="empty">
+        <div class="drop-content">
+          <div class="clipboard-icon" aria-hidden="true">▣</div>
+          <strong id="capture-title" class="drop-title">点击这里，然后按 <kbd>Ctrl</kbd> + <kbd>V</kbd></strong>
+          <span id="capture-help" class="drop-description">支持浏览器能够提供的富文本、表格、普通文字、图片、文件和其他剪贴板类型。再次粘贴会替换当前捕获结果。</span>
+        </div>
+      </div>
+
+      <div class="action-bar" aria-label="捕获操作">
+        <button id="clear-button" class="button-secondary" type="button" disabled>清空</button>
+        <button id="download-text-button" class="button-secondary" type="button" disabled>下载 TXT 报告</button>
+        <button id="download-json-button" class="button-secondary" type="button" disabled>下载 JSON 报告</button>
+        <span class="action-spacer" aria-hidden="true"></span>
+        <output id="status" role="status" aria-live="polite"></output>
+        <button id="copy-report-button" class="button-primary" type="button" disabled>复制全部原始报告</button>
+      </div>
+    </section>
+
+    <section id="result-card" class="result-card" aria-labelledby="result-title" hidden>
+      <div class="panel-head">
+        <div>
+          <h2 id="result-title" class="panel-title">完整原始报告</h2>
+          <p class="panel-description">报告保留捕获内容，并明确记录浏览器未提供、返回空值或读取失败的情况。</p>
+        </div>
+        <span id="report-size" class="panel-count">0 字符</span>
+      </div>
+
+      <div class="summary-grid" aria-label="捕获摘要">
+        <div class="summary-item">
+          <span class="summary-label">捕获状态</span>
+          <span class="summary-value">已完成</span>
+        </div>
+        <div class="summary-item">
+          <span class="summary-label">类型数量</span>
+          <span id="type-count" class="summary-value">0</span>
+        </div>
+        <div class="summary-item">
+          <span class="summary-label">数据项数量</span>
+          <span id="item-count" class="summary-value">0</span>
+        </div>
+        <div class="summary-item">
+          <span class="summary-label">文件数量</span>
+          <span id="file-count" class="summary-value">0</span>
+        </div>
+        <div class="summary-item">
+          <span class="summary-label">北京时间</span>
+          <span id="capture-time" class="summary-value">—</span>
+        </div>
+      </div>
+
+      <div id="type-chips" class="type-chips" aria-label="剪贴板类型列表"></div>
+
+      <div class="report-wrap">
+        <textarea id="report-output" readonly spellcheck="false" aria-label="完整剪贴板原始报告"></textarea>
+      </div>
+    </section>
+
+    <section id="raw-card" class="raw-card" aria-labelledby="raw-title" hidden>
+      <div class="panel-head">
+        <div>
+          <h2 id="raw-title" class="panel-title">分项原始数据</h2>
+          <p class="panel-description">逐项查看或复制浏览器实际交给页面的内容；显示区不会执行任何捕获代码。</p>
+        </div>
+        <span class="panel-count">原样显示</span>
+      </div>
+      <div id="raw-groups" class="raw-groups"></div>
+    </section>
+
+    <aside class="limit-card" aria-labelledby="limit-title">
+      <div class="limit-icon" aria-hidden="true">⚠</div>
+      <div>
+        <h2 id="limit-title">能力边界</h2>
+        <p>本工具保存的是浏览器在 Paste 事件中提供给网页的全部数据，不代表 Windows 剪贴板内部的全部原生格式。浏览器可能隐藏 WPS、Word 等软件的私有二进制格式。当前版本也不检测隐私数据，把报告发送给 AI 前请自行确认内容。</p>
+      </div>
+    </aside>
+  </main>
+
+  <script>
+    "use strict";
+
+    const REPORT_VERSION = "1.0";
+    const STRING_ITEM_TIMEOUT_MS = 2000;
+
+    const dropzone = document.querySelector("#dropzone");
+    const status = document.querySelector("#status");
+    const clearButton = document.querySelector("#clear-button");
+    const downloadTextButton = document.querySelector("#download-text-button");
+    const downloadJsonButton = document.querySelector("#download-json-button");
+    const copyReportButton = document.querySelector("#copy-report-button");
+    const resultCard = document.querySelector("#result-card");
+    const rawCard = document.querySelector("#raw-card");
+    const reportOutput = document.querySelector("#report-output");
+    const reportSize = document.querySelector("#report-size");
+    const typeCount = document.querySelector("#type-count");
+    const itemCount = document.querySelector("#item-count");
+    const fileCount = document.querySelector("#file-count");
+    const captureTime = document.querySelector("#capture-time");
+    const typeChips = document.querySelector("#type-chips");
+    const rawGroups = document.querySelector("#raw-groups");
+
+    let captureSequence = 0;
+    let currentCapture = null;
+    let currentTextReport = "";
+    let currentJsonReport = "";
+
+    function announce(message, tone = "") {
+      status.value = message;
+      status.textContent = message;
+      status.dataset.tone = tone;
+    }
+
+    function safeError(error) {
+      if (!error) return { name: "Error", message: "未知错误" };
+      return {
+        name: String(error.name || "Error"),
+        message: String(error.message || error)
+      };
+    }
+
+    function beijingParts(date = new Date()) {
+      const formatter = new Intl.DateTimeFormat("zh-CN", {
+        timeZone: "Asia/Shanghai",
+        year: "numeric",
+        month: "2-digit",
+        day: "2-digit",
+        hour: "2-digit",
+        minute: "2-digit",
+        second: "2-digit",
+        hourCycle: "h23"
+      });
+      return Object.fromEntries(
+        formatter.formatToParts(date)
+          .filter(part => part.type !== "literal")
+          .map(part => [part.type, part.value])
+      );
+    }
+
+    function formatBeijingTime(date = new Date()) {
+      const parts = beijingParts(date);
+      return `${parts.year}-${parts.month}-${parts.day} ${parts.hour}:${parts.minute}:${parts.second}`;
+    }
+
+    function fileTimestamp(date = new Date()) {
+      const parts = beijingParts(date);
+      return `${parts.year}${parts.month}${parts.day}-${parts.hour}${parts.minute}${parts.second}`;
+    }
+
+    function textMetrics(value) {
+      const text = String(value);
+      let crlf = 0;
+      let cr = 0;
+      let lf = 0;
+      for (let index = 0; index < text.length; index += 1) {
+        if (text[index] === "\r") {
+          if (text[index + 1] === "\n") {
+            crlf += 1;
+            index += 1;
+          } else {
+            cr += 1;
+          }
+        } else if (text[index] === "\n") {
+          lf += 1;
+        }
+      }
+      return {
+        utf16CodeUnits: text.length,
+        utf8Bytes: new Blob([text], { type: "text/plain;charset=utf-8" }).size,
+        lineEndings: { crlf, lf, cr }
+      };
+    }
+
+    function formatBytes(value) {
+      const bytes = Number(value) || 0;
+      if (bytes < 1024) return `${bytes} B`;
+      const units = ["KB", "MB", "GB", "TB"];
+      let size = bytes;
+      let unit = -1;
+      do {
+        size /= 1024;
+        unit += 1;
+      } while (size >= 1024 && unit < units.length - 1);
+      return `${size.toFixed(size >= 10 ? 1 : 2)} ${units[unit]}`;
+    }
+
+    function readStringItem(item) {
+      return new Promise(resolve => {
+        let settled = false;
+        const finish = result => {
+          if (settled) return;
+          settled = true;
+          clearTimeout(timer);
+          resolve(result);
+        };
+        const timer = setTimeout(() => {
+          finish({ status: "timeout", content: "", error: { name: "TimeoutError", message: `getAsString 在 ${STRING_ITEM_TIMEOUT_MS}ms 内没有返回` } });
+        }, STRING_ITEM_TIMEOUT_MS);
+
+        try {
+          item.getAsString(value => {
+            const content = String(value ?? "");
+            finish({
+              status: content === "" ? "empty" : "captured",
+              content,
+              metrics: textMetrics(content),
+              error: null
+            });
+          });
+        } catch (error) {
+          finish({ status: "failed", content: "", error: safeError(error) });
+        }
+      });
+    }
+
+    function readFileAsBase64(file) {
+      return new Promise(resolve => {
+        const reader = new FileReader();
+        reader.addEventListener("load", () => {
+          const dataUrl = String(reader.result || "");
+          const commaIndex = dataUrl.indexOf(",");
+          resolve({
+            status: "captured",
+            base64: commaIndex === -1 ? dataUrl : dataUrl.slice(commaIndex + 1),
+            dataUrlHeader: commaIndex === -1 ? "" : dataUrl.slice(0, commaIndex + 1),
+            error: null
+          });
+        }, { once: true });
+        reader.addEventListener("error", () => {
+          resolve({ status: "failed", base64: "", dataUrlHeader: "", error: safeError(reader.error) });
+        }, { once: true });
+        reader.addEventListener("abort", () => {
+          resolve({ status: "aborted", base64: "", dataUrlHeader: "", error: { name: "AbortError", message: "文件读取被中止" } });
+        }, { once: true });
+        try {
+          reader.readAsDataURL(file);
+        } catch (error) {
+          resolve({ status: "failed", base64: "", dataUrlHeader: "", error: safeError(error) });
+        }
+      });
+    }
+
+    async function createFileRecord(entry, index) {
+      const file = entry.file;
+      const binary = await readFileAsBase64(file);
+      const lastModifiedDate = Number.isFinite(file.lastModified) && file.lastModified > 0
+        ? new Date(file.lastModified)
+        : null;
+      return {
+        index,
+        origins: entry.origins,
+        name: String(file.name || ""),
+        type: String(file.type || ""),
+        size: Number(file.size) || 0,
+        lastModifiedMilliseconds: Number(file.lastModified) || 0,
+        lastModifiedIso: lastModifiedDate ? lastModifiedDate.toISOString() : "",
+        lastModifiedBeijing: lastModifiedDate ? formatBeijingTime(lastModifiedDate) : "",
+        webkitRelativePath: String(file.webkitRelativePath || ""),
+        binary
+      };
+    }
+
+    function captureTypeRecords(data, types) {
+      return types.map((type, index) => {
+        try {
+          const content = String(data.getData(type) ?? "");
+          return {
+            index,
+            type,
+            status: content === "" ? "empty" : "captured",
+            content,
+            metrics: textMetrics(content),
+            error: null
+          };
+        } catch (error) {
+          return {
+            index,
+            type,
+            status: "failed",
+            content: "",
+            metrics: textMetrics(""),
+            error: safeError(error)
+          };
+        }
+      });
+    }
+
+    async function buildCapture(event, sequence) {
+      const data = event.clipboardData;
+      if (!data) throw new Error("浏览器没有向本次 Paste 事件提供 clipboardData");
+
+      const capturedAt = new Date();
+      const types = Array.from(data.types || [], type => String(type));
+      const itemObjects = Array.from(data.items || []);
+      const listedFiles = Array.from(data.files || []);
+      const typeRecords = captureTypeRecords(data, types);
+
+      const fileEntries = [];
+      const fileEntryByObject = new Map();
+      const addFile = (file, origin) => {
+        if (!file) return null;
+        if (fileEntryByObject.has(file)) {
+          const existing = fileEntryByObject.get(file);
+          existing.origins.push(origin);
+          return existing;
+        }
+        const entry = { file, origins: [origin] };
+        fileEntryByObject.set(file, entry);
+        fileEntries.push(entry);
+        return entry;
+      };
+
+      listedFiles.forEach((file, index) => addFile(file, `DataTransfer.files[${index}]`));
+
+      const itemPromises = itemObjects.map((item, index) => {
+        const record = {
+          index,
+          kind: String(item.kind || ""),
+          type: String(item.type || ""),
+          stringRead: null,
+          file: null
+        };
+
+        if (item.kind === "string") {
+          return readStringItem(item).then(stringRead => ({ ...record, stringRead }));
+        }
+
+        if (item.kind === "file") {
+          try {
+            const file = item.getAsFile();
+            addFile(file, `DataTransfer.items[${index}]`);
+            record.file = file ? {
+              name: String(file.name || ""),
+              type: String(file.type || ""),
+              size: Number(file.size) || 0,
+              lastModifiedMilliseconds: Number(file.lastModified) || 0
+            } : null;
+          } catch (error) {
+            record.file = { readError: safeError(error) };
+          }
+        }
+
+        return Promise.resolve(record);
+      });
+
+      const [items, files] = await Promise.all([
+        Promise.all(itemPromises),
+        Promise.all(fileEntries.map((entry, index) => createFileRecord(entry, index)))
+      ]);
+
+      if (sequence !== captureSequence) return null;
+
+      return {
+        reportVersion: REPORT_VERSION,
+        captureScope: "浏览器 ClipboardEvent.clipboardData 在用户触发的 Paste 事件中提供的数据",
+        capabilityNotice: "这不是 Windows 系统剪贴板全部原生格式的无损转储；浏览器可能过滤或转换格式。",
+        privacyNotice: "当前版本不检测隐私或敏感数据，发送报告前请自行检查。",
+        capturedAt: {
+          beijingTime: formatBeijingTime(capturedAt),
+          timeZone: "Asia/Shanghai",
+          unixMilliseconds: capturedAt.getTime(),
+          isoUtc: capturedAt.toISOString()
+        },
+        environment: {
+          userAgent: navigator.userAgent,
+          language: navigator.language,
+          platform: navigator.platform,
+          locationProtocol: location.protocol,
+          secureContext: window.isSecureContext,
+          asyncClipboardWriteAvailable: Boolean(navigator.clipboard && navigator.clipboard.writeText),
+          clipboardItemAvailable: typeof window.ClipboardItem === "function"
+        },
+        clipboardEvent: {
+          type: event.type,
+          isTrusted: event.isTrusted,
+          bubbles: event.bubbles,
+          cancelable: event.cancelable,
+          composed: event.composed,
+          timeStamp: event.timeStamp
+        },
+        dataTransfer: {
+          dropEffect: String(data.dropEffect || ""),
+          effectAllowed: String(data.effectAllowed || ""),
+          typeCount: typeRecords.length,
+          itemCount: items.length,
+          fileCount: files.length
+        },
+        types: typeRecords,
+        items,
+        files
+      };
+    }
+
+    function pushError(lines, error) {
+      if (!error) return;
+      lines.push(`错误名称：${error.name}`);
+      lines.push(`错误信息：${error.message}`);
+    }
+
+    function pushMetrics(lines, metrics) {
+      if (!metrics) return;
+      lines.push(`UTF-16 代码单元数：${metrics.utf16CodeUnits}`);
+      lines.push(`按 UTF-8 重新编码后的字节数：${metrics.utf8Bytes}`);
+      lines.push(`换行符：CRLF=${metrics.lineEndings.crlf}，LF=${metrics.lineEndings.lf}，CR=${metrics.lineEndings.cr}`);
+    }
+
+    function buildTextReport(capture) {
+      const lines = [];
+      lines.push("剪贴板原始捕获报告");
+      lines.push("====================");
+      lines.push(`报告版本：${capture.reportVersion}`);
+      lines.push(`捕获范围：${capture.captureScope}`);
+      lines.push(`能力说明：${capture.capabilityNotice}`);
+      lines.push(`隐私说明：${capture.privacyNotice}`);
+      lines.push("");
+      lines.push("[捕获时间]");
+      lines.push(`北京时间：${capture.capturedAt.beijingTime}`);
+      lines.push(`时区：${capture.capturedAt.timeZone}`);
+      lines.push(`Unix 毫秒：${capture.capturedAt.unixMilliseconds}`);
+      lines.push(`UTC ISO：${capture.capturedAt.isoUtc}`);
+      lines.push("");
+      lines.push("[运行环境]");
+      lines.push(`User-Agent：${capture.environment.userAgent}`);
+      lines.push(`语言：${capture.environment.language}`);
+      lines.push(`平台：${capture.environment.platform}`);
+      lines.push(`页面协议：${capture.environment.locationProtocol}`);
+      lines.push(`安全上下文：${capture.environment.secureContext}`);
+      lines.push(`Async Clipboard writeText 可用：${capture.environment.asyncClipboardWriteAvailable}`);
+      lines.push(`ClipboardItem 可用：${capture.environment.clipboardItemAvailable}`);
+      lines.push("");
+      lines.push("[ClipboardEvent]");
+      Object.entries(capture.clipboardEvent).forEach(([key, value]) => lines.push(`${key}：${value}`));
+      lines.push("");
+      lines.push("[DataTransfer 摘要]");
+      lines.push(`dropEffect：${capture.dataTransfer.dropEffect}`);
+      lines.push(`effectAllowed：${capture.dataTransfer.effectAllowed}`);
+      lines.push(`类型数量：${capture.dataTransfer.typeCount}`);
+      lines.push(`数据项数量：${capture.dataTransfer.itemCount}`);
+      lines.push(`文件数量：${capture.dataTransfer.fileCount}`);
+      lines.push("");
+      lines.push("[类型顺序]");
+      if (!capture.types.length) lines.push("（浏览器没有提供类型）");
+      capture.types.forEach(record => {
+        lines.push(`${record.index + 1}. ${record.type || "（空类型名称）"}，读取状态：${record.status}`);
+      });
+
+      lines.push("");
+      lines.push("[DataTransfer.items]");
+      if (!capture.items.length) lines.push("（没有数据项）");
+      capture.items.forEach(item => {
+        lines.push("");
+        lines.push(`--- Item ${item.index} ---`);
+        lines.push(`kind：${item.kind}`);
+        lines.push(`type：${item.type}`);
+        if (item.file) lines.push(`文件元数据：${JSON.stringify(item.file, null, 2)}`);
+        if (item.stringRead) {
+          lines.push(`getAsString 状态：${item.stringRead.status}`);
+          pushMetrics(lines, item.stringRead.metrics);
+          pushError(lines, item.stringRead.error);
+          lines.push(`===== BEGIN ITEM ${item.index} STRING CONTENT =====`);
+          lines.push(item.stringRead.content);
+          lines.push(`===== END ITEM ${item.index} STRING CONTENT =====`);
+        }
+      });
+
+      lines.push("");
+      lines.push("[各类型 getData 原始内容]");
+      if (!capture.types.length) lines.push("（没有可读取类型）");
+      capture.types.forEach(record => {
+        lines.push("");
+        lines.push(`--- Format ${record.index}: ${record.type || "（空类型名称）"} ---`);
+        lines.push(`读取状态：${record.status}`);
+        pushMetrics(lines, record.metrics);
+        pushError(lines, record.error);
+        lines.push(`===== BEGIN FORMAT ${record.index} ${record.type} =====`);
+        lines.push(record.content);
+        lines.push(`===== END FORMAT ${record.index} ${record.type} =====`);
+      });
+
+      lines.push("");
+      lines.push("[文件与二进制数据]");
+      if (!capture.files.length) lines.push("（没有文件）");
+      capture.files.forEach(file => {
+        lines.push("");
+        lines.push(`--- File ${file.index} ---`);
+        lines.push(`来源：${file.origins.join("；")}`);
+        lines.push(`文件名：${file.name}`);
+        lines.push(`MIME 类型：${file.type}`);
+        lines.push(`大小：${file.size} 字节`);
+        lines.push(`lastModified 毫秒：${file.lastModifiedMilliseconds}`);
+        lines.push(`lastModified UTC：${file.lastModifiedIso}`);
+        lines.push(`lastModified 北京时间：${file.lastModifiedBeijing}`);
+        lines.push(`webkitRelativePath：${file.webkitRelativePath}`);
+        lines.push(`二进制读取状态：${file.binary.status}`);
+        lines.push(`Data URL 头：${file.binary.dataUrlHeader}`);
+        pushError(lines, file.binary.error);
+        lines.push(`===== BEGIN FILE ${file.index} BASE64 =====`);
+        lines.push(file.binary.base64);
+        lines.push(`===== END FILE ${file.index} BASE64 =====`);
+      });
+
+      lines.push("");
+      lines.push("报告结束");
+      return lines.join("\n");
+    }
+
+    function createCopyButton(value, label = "复制这一部分") {
+      const button = document.createElement("button");
+      button.type = "button";
+      button.className = "small-button";
+      button.textContent = label;
+      button.addEventListener("click", async () => {
+        const copied = await copyText(value);
+        announce(copied ? "已复制这一部分的原始内容。" : "浏览器拒绝复制，请手动选择文本。", copied ? "success" : "error");
+      });
+      return button;
+    }
+
+    function createRawDetails(name, meta, value, note, open = false) {
+      const details = document.createElement("details");
+      details.open = open;
+
+      const summary = document.createElement("summary");
+      const title = document.createElement("span");
+      title.className = "detail-name";
+      title.textContent = name;
+      const metadata = document.createElement("span");
+      metadata.className = "detail-meta";
+      metadata.textContent = meta;
+      summary.append(title, metadata);
+
+      const body = document.createElement("div");
+      body.className = "detail-body";
+      const actions = document.createElement("div");
+      actions.className = "detail-actions";
+      const noteElement = document.createElement("span");
+      noteElement.className = "detail-note";
+      noteElement.textContent = note;
+      actions.append(noteElement, createCopyButton(value));
+
+      const output = document.createElement("textarea");
+      output.className = "raw-output";
+      output.readOnly = true;
+      output.spellcheck = false;
+      output.setAttribute("aria-label", `${name} 原始内容`);
+      output.value = value;
+
+      body.append(actions, output);
+      details.append(summary, body);
+      return details;
+    }
+
+    function appendGroupTitle(text) {
+      const heading = document.createElement("h3");
+      heading.className = "raw-group-title";
+      heading.textContent = text;
+      rawGroups.append(heading);
+    }
+
+    function appendEmpty(text) {
+      const empty = document.createElement("div");
+      empty.className = "raw-empty";
+      empty.textContent = text;
+      rawGroups.append(empty);
+    }
+
+    function renderRawGroups(capture) {
+      rawGroups.replaceChildren();
+
+      appendGroupTitle("类型数据：DataTransfer.getData(type)");
+      if (!capture.types.length) {
+        appendEmpty("浏览器没有提供类型数据");
+      } else {
+        capture.types.forEach((record, index) => {
+          const note = `读取状态：${record.status}；UTF-16 代码单元：${record.metrics.utf16CodeUnits}；UTF-8 字节：${record.metrics.utf8Bytes}`;
+          rawGroups.append(createRawDetails(
+            `${record.index + 1}. ${record.type || "（空类型名称）"}`,
+            `${record.status} · ${formatBytes(record.metrics.utf8Bytes)}`,
+            record.content,
+            note,
+            index === 0
+          ));
+        });
+      }
+
+      appendGroupTitle("数据项：DataTransfer.items");
+      if (!capture.items.length) {
+        appendEmpty("浏览器没有提供 DataTransferItem");
+      } else {
+        capture.items.forEach(item => {
+          const value = item.stringRead
+            ? item.stringRead.content
+            : JSON.stringify({ index: item.index, kind: item.kind, type: item.type, file: item.file }, null, 2);
+          const state = item.stringRead ? item.stringRead.status : item.kind;
+          rawGroups.append(createRawDetails(
+            `Item ${item.index} · ${item.type || "（空类型名称）"}`,
+            `${item.kind} · ${state}`,
+            value,
+            `kind：${item.kind}；type：${item.type}；状态：${state}`
+          ));
+        });
+      }
+
+      appendGroupTitle("文件与二进制 Base64");
+      if (!capture.files.length) {
+        appendEmpty("本次粘贴没有浏览器可见文件");
+      } else {
+        capture.files.forEach(file => {
+          rawGroups.append(createRawDetails(
+            `File ${file.index} · ${file.name || "（无文件名）"}`,
+            `${file.binary.status} · ${formatBytes(file.size)}`,
+            file.binary.base64,
+            `类型：${file.type || "（空）"}；大小：${file.size} 字节；来源：${file.origins.join("；")}`
+          ));
+        });
+      }
+    }
+
+    function renderCapture(capture) {
+      currentCapture = capture;
+      currentTextReport = buildTextReport(capture);
+      currentJsonReport = JSON.stringify(capture, null, 2);
+
+      typeCount.textContent = String(capture.dataTransfer.typeCount);
+      itemCount.textContent = String(capture.dataTransfer.itemCount);
+      fileCount.textContent = String(capture.dataTransfer.fileCount);
+      captureTime.textContent = capture.capturedAt.beijingTime;
+      reportSize.textContent = `${currentTextReport.length.toLocaleString("zh-CN")} 字符`;
+      reportOutput.value = currentTextReport;
+
+      typeChips.replaceChildren();
+      if (capture.types.length) {
+        capture.types.forEach(record => {
+          const chip = document.createElement("span");
+          chip.className = "type-chip";
+          chip.textContent = record.type || "（空类型名称）";
+          typeChips.append(chip);
+        });
+      } else {
+        const chip = document.createElement("span");
+        chip.className = "type-chip";
+        chip.textContent = "浏览器未提供类型";
+        typeChips.append(chip);
+      }
+
+      renderRawGroups(capture);
+      resultCard.hidden = false;
+      rawCard.hidden = false;
+      [clearButton, downloadTextButton, downloadJsonButton, copyReportButton].forEach(button => {
+        button.disabled = false;
+      });
+    }
+
+    function resetDropzone() {
+      dropzone.dataset.state = "empty";
+      dropzone.replaceChildren();
+      const content = document.createElement("div");
+      content.className = "drop-content";
+      content.innerHTML = `<div class="clipboard-icon" aria-hidden="true">▣</div><strong class="drop-title">点击这里，然后按 <kbd>Ctrl</kbd> + <kbd>V</kbd></strong><span class="drop-description">支持浏览器能够提供的富文本、表格、普通文字、图片、文件和其他剪贴板类型。再次粘贴会替换当前捕获结果。</span>`;
+      dropzone.append(content);
+    }
+
+    function setDropzoneMessage(title, description, state) {
+      dropzone.dataset.state = state;
+      dropzone.replaceChildren();
+      const content = document.createElement("div");
+      content.className = "drop-content";
+      const icon = document.createElement("div");
+      icon.className = "clipboard-icon";
+      icon.setAttribute("aria-hidden", "true");
+      icon.textContent = state === "captured" ? "✓" : "…";
+      const titleElement = document.createElement("strong");
+      titleElement.className = "drop-title";
+      titleElement.textContent = title;
+      const descriptionElement = document.createElement("span");
+      descriptionElement.className = "drop-description";
+      descriptionElement.textContent = description;
+      content.append(icon, titleElement, descriptionElement);
+      dropzone.append(content);
+    }
+
+    async function handlePaste(event) {
+      event.preventDefault();
+      const sequence = ++captureSequence;
+      setDropzoneMessage("正在读取剪贴板原始数据…", "文件和图片需要转换为 Base64，内容较大时请稍候。", "capturing");
+      announce("正在捕获，请不要关闭页面。", "");
+      [clearButton, downloadTextButton, downloadJsonButton, copyReportButton].forEach(button => {
+        button.disabled = true;
+      });
+
+      try {
+        const capture = await buildCapture(event, sequence);
+        if (!capture || sequence !== captureSequence) return;
+        renderCapture(capture);
+        setDropzoneMessage(
+          "已捕获剪贴板原始数据",
+          `读取到 ${capture.dataTransfer.typeCount} 种类型、${capture.dataTransfer.itemCount} 个数据项和 ${capture.dataTransfer.fileCount} 个文件。再次按 Ctrl + V 可替换结果。`,
+          "captured"
+        );
+        announce("完整原始报告已生成，可以一键复制或下载。", "success");
+      } catch (error) {
+        if (sequence !== captureSequence) return;
+        const detail = safeError(error);
+        resetDropzone();
+        announce(`捕获失败：${detail.name}：${detail.message}`, "error");
+        clearButton.disabled = false;
+      }
+    }
+
+    async function copyText(value) {
+      const text = String(value);
+      try {
+        if (!navigator.clipboard || typeof navigator.clipboard.writeText !== "function") {
+          throw new Error("Async Clipboard unavailable");
+        }
+        await navigator.clipboard.writeText(text);
+        return true;
+      } catch (error) {
+        const helper = document.createElement("textarea");
+        helper.value = text;
+        helper.setAttribute("readonly", "");
+        helper.style.cssText = "position:fixed;left:-10000px;top:0;width:1px;height:1px;opacity:0";
+        document.body.append(helper);
+        helper.focus();
+        helper.select();
+        let copied = false;
+        try {
+          copied = document.execCommand("copy");
+        } catch (copyError) {
+          copied = false;
+        }
+        helper.remove();
+        return copied;
+      }
+    }
+
+    function downloadReport(content, mimeType, extension) {
+      const blob = new Blob([content], { type: mimeType });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `剪贴板原始捕获报告-${fileTimestamp()}.${extension}`;
+      document.body.append(link);
+      link.click();
+      link.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
+    }
+
+    dropzone.addEventListener("paste", handlePaste);
+    dropzone.addEventListener("click", () => dropzone.focus());
+
+    clearButton.addEventListener("click", () => {
+      captureSequence += 1;
+      currentCapture = null;
+      currentTextReport = "";
+      currentJsonReport = "";
+      reportOutput.value = "";
+      typeChips.replaceChildren();
+      rawGroups.replaceChildren();
+      resultCard.hidden = true;
+      rawCard.hidden = true;
+      [clearButton, downloadTextButton, downloadJsonButton, copyReportButton].forEach(button => {
+        button.disabled = true;
+      });
+      resetDropzone();
+      dropzone.focus();
+      announce("已清空，等待新的粘贴。", "");
+    });
+
+    copyReportButton.addEventListener("click", async () => {
+      if (!currentCapture) return;
+      const copied = await copyText(currentTextReport);
+      announce(
+        copied ? "完整原始报告已复制，可以直接粘贴给 AI。" : "浏览器拒绝复制，请在报告框中手动全选复制。",
+        copied ? "success" : "error"
+      );
+    });
+
+    downloadTextButton.addEventListener("click", () => {
+      if (!currentCapture) return;
+      downloadReport(currentTextReport, "text/plain;charset=utf-8", "txt");
+      announce("TXT 原始报告已下载。", "success");
+    });
+
+    downloadJsonButton.addEventListener("click", () => {
+      if (!currentCapture) return;
+      downloadReport(currentJsonReport, "application/json;charset=utf-8", "json");
+      announce("JSON 原始报告已下载。", "success");
+    });
+  </script>
+</body>
+</html>
